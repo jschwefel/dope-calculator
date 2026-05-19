@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOPE Sticker Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>DOPE Sticker Calculator</h1>
+        <p class="subtitle">Avery 8293 Scope Sticker Generator</p>
+    </header>
+
+    <!-- Session bar -->
+    <section class="card" id="session-section">
+        <h2>Session</h2>
+        <div class="row">
+            <div class="field">
+                <label for="session-name">Session Name</label>
+                <input type="text" id="session-name" placeholder="e.g. Rifle 1 – Summer Match" maxlength="40">
+            </div>
+            <div class="actions">
+                <button id="btn-save-session" class="btn-secondary">Save .dope</button>
+                <button id="btn-load-session" class="btn-secondary">Load .dope</button>
+                <input type="file" id="file-load-input" accept=".dope" class="hidden">
+            </div>
+        </div>
+    </section>
+
+    <!-- Ammunition -->
+    <section class="card" id="ammo-section">
+        <h2>Ammunition</h2>
+        <div class="row">
+            <div class="field">
+                <label for="caliber-select">Caliber</label>
+                <select id="caliber-select">
+                    {% for cal in calibers %}
+                    <option value="{{ cal }}">{{ cal }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="ammo-select">Load</label>
+                <select id="ammo-select">
+                    {% for a in ammo_list %}
+                    <option value="{{ a.name }}" data-caliber="{{ a.caliber }}" data-velocity="{{ a.velocity_fps }}" data-bcg7="{{ a.bc_g7 }}" data-bcg1="{{ a.bc_g1 }}">{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="bc-model">BC Model</label>
+                <select id="bc-model">
+                    <option value="g7">G7</option>
+                    <option value="g1">G1</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="velocity-fps">Muzzle Velocity (fps)</label>
+                <input type="number" id="velocity-fps" value="1070" min="800" max="5000" step="1">
+            </div>
+            <div class="field" id="field-bc-g7">
+                <label for="bc-g7">BC (G7)</label>
+                <input type="number" id="bc-g7" value="0.067" min="0.01" max="1.5" step="0.001">
+            </div>
+            <div class="field hidden" id="field-bc-g1">
+                <label for="bc-g1">BC (G1)</label>
+                <input type="number" id="bc-g1" value="0.131" min="0.01" max="1.5" step="0.001">
+            </div>
+        </div>
+        <div class="row ammo-db-controls">
+            <button id="btn-show-add-ammo" class="btn-secondary btn-sm">+ Add Ammo to DB</button>
+            <button id="btn-edit-ammo" class="btn-secondary btn-sm">Edit Selected</button>
+            <button id="btn-show-delete-ammo" class="btn-danger btn-sm">Delete Selected</button>
+        </div>
+        <div id="add-ammo-form" class="hidden sub-form">
+            <h3>Add New Ammunition</h3>
+            <div class="row">
+                <div class="field"><label>Caliber</label><input type="text" id="new-ammo-caliber" placeholder="e.g. 6.5 Creedmoor"></div>
+                <div class="field"><label>Name</label><input type="text" id="new-ammo-name" placeholder="Brand / load description"></div>
+                <div class="field"><label>Velocity (fps)</label><input type="number" id="new-ammo-vel" value="2700" step="1"></div>
+                <div class="field"><label>BC G1</label><input type="number" id="new-ammo-bcg1" value="0.500" step="0.001"></div>
+                <div class="field"><label>BC G7</label><input type="number" id="new-ammo-bcg7" value="0.250" step="0.001"></div>
+                <div class="actions"><button id="btn-add-ammo" class="btn-primary">Add</button></div>
+            </div>
+        </div>
+        <div id="edit-ammo-form" class="hidden sub-form">
+            <h3>Edit Ammunition</h3>
+            <div class="row">
+                <div class="field"><label>Caliber</label><input type="text" id="edit-ammo-caliber"></div>
+                <div class="field"><label>Name</label><input type="text" id="edit-ammo-name"></div>
+                <div class="field"><label>Velocity (fps)</label><input type="number" id="edit-ammo-vel" step="1"></div>
+                <div class="field"><label>BC G1</label><input type="number" id="edit-ammo-bcg1" step="0.001"></div>
+                <div class="field"><label>BC G7</label><input type="number" id="edit-ammo-bcg7" step="0.001"></div>
+                <div class="actions">
+                    <button id="btn-save-edit-ammo" class="btn-primary">Save</button>
+                    <button id="btn-cancel-edit-ammo" class="btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Range DOPE Entries -->
+    <section class="card">
+        <h2>Range DOPE Entries <span class="hint">(observed, up to 6)</span></h2>
+        <div class="row range-conditions-row">
+            <div class="field">
+                <label for="range-temp-f">Range Temperature (°F)</label>
+                <input type="number" id="range-temp-f" placeholder="e.g. 72" min="-30" max="120" step="1">
+            </div>
+            <div class="field">
+                <label for="range-altitude-ft">Range Elevation (ft)</label>
+                <input type="number" id="range-altitude-ft" placeholder="e.g. 850" min="-200" max="15000" step="50">
+            </div>
+            <p class="hint range-conditions-hint">Leave blank to use match-day conditions.</p>
+        </div>
+        <div class="dope-header">
+            <span>Distance (yd)</span>
+            <span>Adjustment (mils)</span>
+            <span></span>
+        </div>
+        <div id="dope-entries"></div>
+        <button id="btn-add-dope" class="btn-secondary btn-sm">+ Add Entry</button>
+    </section>
+
+    <!-- Match-Day Conditions -->
+    <section class="card">
+        <h2>Match-Day Conditions</h2>
+        <div class="row">
+            <div class="field">
+                <label for="zero-yards">Zero Distance (yards)</label>
+                <input type="number" id="zero-yards" value="50" min="10" max="300" step="5">
+            </div>
+            <div class="field">
+                <label for="sight-height-in">Scope Height (inches)</label>
+                <input type="number" id="sight-height-in" value="1.5" min="0.5" max="4.0" step="0.1">
+            </div>
+            <div class="field">
+                <label for="temp-f">Temperature (°F)</label>
+                <input type="number" id="temp-f" value="59" min="-30" max="120" step="1">
+            </div>
+            <div class="field">
+                <label for="altitude-ft">Elevation (ft)</label>
+                <input type="number" id="altitude-ft" value="0" min="-200" max="15000" step="50">
+            </div>
+        </div>
+    </section>
+
+    <!-- Output Distances -->
+    <section class="card">
+        <h2>Output Distances <span class="hint">(up to 10)</span></h2>
+        <div id="output-distances" class="distance-grid"></div>
+        <div class="row preset-row">
+            <span class="hint preset-label">Quick add:</span>
+            <div class="preset-chips">
+                <button class="btn-preset" data-dist="25">25</button>
+                <button class="btn-preset" data-dist="50">50</button>
+                <button class="btn-preset" data-dist="75">75</button>
+                <button class="btn-preset" data-dist="100">100</button>
+                <button class="btn-preset" data-dist="150">150</button>
+                <button class="btn-preset" data-dist="200">200</button>
+                <button class="btn-preset" data-dist="250">250</button>
+                <button class="btn-preset" data-dist="300">300</button>
+            </div>
+        </div>
+        <div class="row">
+            <input type="number" id="new-distance" placeholder="Custom distance (yards)" min="10" step="5">
+            <button id="btn-add-distance" class="btn-secondary btn-sm">Add</button>
+        </div>
+    </section>
+
+    <!-- Calculate -->
+    <section class="card">
+        <h2>Calculate</h2>
+        <button id="btn-calculate" class="btn-primary btn-lg">Calculate DOPE</button>
+        <div id="results-table" class="hidden">
+            <h3>Calculated Adjustments</h3>
+            <table id="results">
+                <thead><tr><th>Distance (yd)</th><th>Adjustment (mils)</th><th>Clicks</th><th>Include in Sticker</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- PDF Generation -->
+    <section class="card" id="pdf-section">
+        <h2>Generate Sticker PDF</h2>
+        <div class="pdf-layout">
+            <div class="pdf-controls">
+                <div class="row">
+                    <div class="field">
+                        <label for="label-row">Label Row (1–5)</label>
+                        <input type="number" id="label-row" value="1" min="1" max="5" step="1">
+                    </div>
+                    <div class="field">
+                        <label for="label-col">Label Column (1–4)</label>
+                        <input type="number" id="label-col" value="1" min="1" max="4" step="1">
+                    </div>
+                </div>
+                <div class="label-grid-preview">
+                    <p class="hint">Avery 8293 — click to select position:</p>
+                    <div id="label-grid"></div>
+                </div>
+                <label class="fill-sheet-label">
+                    <input type="checkbox" id="fill-sheet">
+                    Fill entire sheet (all 20 positions)
+                </label>
+                <details class="calibration-details">
+                    <summary>Printer Calibration Offset</summary>
+                    <div class="row calibration-row">
+                        <div class="field">
+                            <label for="offset-x">Horizontal offset (inches, + = right)</label>
+                            <input type="number" id="offset-x" value="0" min="-1" max="1" step="0.01">
+                        </div>
+                        <div class="field">
+                            <label for="offset-y">Vertical offset (inches, + = down)</label>
+                            <input type="number" id="offset-y" value="0" min="-1" max="1" step="0.01">
+                        </div>
+                        <p class="hint calibration-hint">Measure how far off each label is after a test print.</p>
+                    </div>
+                </details>
+                <button id="btn-generate-pdf" class="btn-primary btn-lg">Download PDF</button>
+            </div>
+            <div class="sticker-preview-wrap">
+                <p class="hint">Sticker preview:</p>
+                <div id="sticker-preview">
+                    <span class="preview-placeholder">Calculate DOPE first</span>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

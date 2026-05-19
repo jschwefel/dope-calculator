@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Database (contains live user data and IP records)
+data/dope.db
+data/dope.db-shm
+data/dope.db-wal
+
+# Runtime
+.gunicorn/
+*.log
+sessions/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

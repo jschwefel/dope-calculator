@@ -1,0 +1,125 @@
+caliber,name,velocity_fps,bc_g1,bc_g7
+.22 LR,CCI Green Tag,1070,0.131,0.067
+.22 LR,CCI Standard Velocity,1070,0.129,0.065
+.22 LR,CCI SV Lead Round Nose,1070,0.129,0.065
+.22 LR,Eley Tenex,1085,0.150,0.075
+.22 LR,Eley Match,1085,0.143,0.072
+.22 LR,Eley Club,1085,0.130,0.066
+.22 LR,Lapua X-Act,1073,0.155,0.078
+.22 LR,Lapua Midas+,1073,0.150,0.075
+.22 LR,Lapua Center-X,1073,0.145,0.073
+.22 LR,SK Standard Plus,1073,0.140,0.070
+.22 LR,SK Rifle Match,1073,0.148,0.074
+.22 LR,RWS R50,1073,0.148,0.074
+.22 LR,Aguila Super Extra,1130,0.118,0.060
+.22 LR,Federal AutoMatch,1200,0.120,0.061
+.22 LR,Remington Golden Bullet,1255,0.115,0.058
+.223 Remington,Federal GM223M 69gr Sierra MatchKing,2950,0.369,0.187
+.223 Remington,Hornady 68gr BTHP Match,2910,0.370,0.188
+.223 Remington,Hornady 75gr ELD Match,2790,0.395,0.201
+.223 Remington,Black Hills 77gr Sierra MatchKing,2750,0.420,0.214
+.223 Remington,Nosler 77gr Custom Competition,2750,0.372,0.190
+.223 Remington,Hornady 55gr V-MAX,3240,0.265,0.135
+5.56 NATO,M193 55gr FMJ Ball,3240,0.270,0.136
+5.56 NATO,M855 62gr FMJ,3025,0.304,0.151
+5.56 NATO,Mk262 Mod1 77gr OTM,2750,0.420,0.214
+5.56 NATO,Hornady 75gr BTHP M-TAC,2910,0.395,0.201
+.243 Winchester,Hornady 95gr ELD-X,3100,0.465,0.237
+.243 Winchester,Federal 95gr Sierra MatchKing,3050,0.379,0.193
+.243 Winchester,Nosler 95gr AccuBond,3100,0.384,0.196
+.243 Winchester,Winchester 95gr Ballistic Silvertip,3100,0.357,0.182
+.243 Winchester,Remington 100gr Core-Lokt,2960,0.356,0.181
+6mm BR Norma,Lapua 105gr Scenar,2920,0.541,0.276
+6mm BR Norma,Berger 105gr Hybrid Target,2870,0.548,0.282
+6mm BR Norma,Hornady 108gr ELD-M,2850,0.536,0.274
+6mm Dasher,Berger 105gr Hybrid Target,2970,0.548,0.282
+6mm Dasher,Berger 109gr LRHT,2940,0.572,0.291
+6mm Dasher,Lapua 105gr Scenar,2970,0.541,0.276
+6mm Dasher,Hornady 108gr ELD-M,2950,0.536,0.274
+6mm GT,Hornady 108gr ELD-M,2910,0.536,0.274
+6mm GT,Berger 109gr LRHT,2940,0.572,0.291
+6mm GT,Berger 105gr Hybrid Target,2960,0.548,0.282
+6mm Creedmoor,Hornady 108gr ELD-M,3020,0.536,0.274
+6mm Creedmoor,Berger 109gr LRHT,3000,0.572,0.291
+6mm Creedmoor,Berger 105gr Hybrid Target,3050,0.548,0.282
+6mm Creedmoor,Lapua 105gr Scenar-L,3020,0.541,0.276
+6XC,Berger 105gr Hybrid Target,3025,0.548,0.282
+6XC,Berger 109gr LRHT,3010,0.572,0.291
+6XC,Hornady 108gr ELD-M,3000,0.536,0.274
+.25-06 Remington,Hornady 117gr SST,2990,0.430,0.219
+.25-06 Remington,Nosler 115gr AccuBond,3000,0.420,0.214
+.25-06 Remington,Federal 117gr Sierra GameKing,2990,0.393,0.200
+.25-06 Remington,Remington 120gr Core-Lokt,2990,0.391,0.199
+.260 Remington,Hornady 140gr ELD-M,2750,0.646,0.326
+.260 Remington,Berger 130gr Hybrid Target,2875,0.545,0.279
+.260 Remington,Sierra 142gr MatchKing,2700,0.595,0.303
+6.5x47 Lapua,Lapua 123gr Scenar,2838,0.514,0.263
+6.5x47 Lapua,Hornady 130gr ELD-M,2800,0.530,0.271
+6.5x47 Lapua,Berger 130gr Hybrid Target,2820,0.545,0.279
+6.5 Creedmoor,Hornady 140gr ELD-M,2710,0.646,0.326
+6.5 Creedmoor,Hornady 143gr ELD-X Precision Hunter,2700,0.625,0.315
+6.5 Creedmoor,Federal 140gr Gold Medal Sierra MatchKing,2650,0.535,0.271
+6.5 Creedmoor,Lapua 136gr Scenar-L,2795,0.547,0.274
+6.5 Creedmoor,Berger 140gr Hybrid Target,2710,0.607,0.310
+6.5x55 Swedish,Hornady 140gr ELD-M,2550,0.646,0.326
+6.5x55 Swedish,Nosler 140gr AccuBond,2550,0.490,0.250
+6.5x55 Swedish,Federal 140gr Fusion,2550,0.447,0.228
+6.5x55 Swedish,Lapua 136gr Scenar-L,2625,0.547,0.274
+6.5 PRC,Hornady 147gr ELD-M,2910,0.697,0.351
+6.5 PRC,Hornady 143gr ELD-X,2960,0.625,0.315
+6.5 PRC,Berger 140gr Hybrid Target,3000,0.607,0.310
+6.5 PRC,Federal 140gr Terminal Ascent,2970,0.532,0.274
+.270 Winchester,Hornady 130gr SST,3060,0.391,0.199
+.270 Winchester,Hornady 145gr ELD-X,2970,0.536,0.274
+.270 Winchester,Nosler 140gr AccuBond,2950,0.496,0.253
+.270 Winchester,Federal 130gr Trophy Bonded Tip,3060,0.400,0.204
+.270 Winchester,Winchester 130gr Power-Point,3060,0.372,0.190
+.270 Winchester,Remington 130gr Core-Lokt,3060,0.335,0.171
+.270 WSM,Hornady 145gr ELD-X,3100,0.536,0.274
+.270 WSM,Nosler 140gr AccuBond,3125,0.496,0.253
+.270 WSM,Federal 130gr Trophy Bonded Tip,3300,0.400,0.204
+.270 WSM,Winchester 130gr Ballistic Silvertip,3275,0.392,0.200
+7mm-08 Remington,Hornady 139gr SST,2860,0.486,0.248
+7mm-08 Remington,Federal 140gr Trophy Bonded Tip,2800,0.490,0.250
+7mm-08 Remington,Nosler 140gr AccuBond,2800,0.485,0.248
+7mm-08 Remington,Remington 140gr Core-Lokt,2860,0.445,0.227
+.280 Remington,Hornady 162gr ELD-X,2850,0.620,0.317
+.280 Remington,Federal 150gr Trophy Bonded Tip,2890,0.493,0.251
+.280 Remington,Nosler 160gr AccuBond,2840,0.531,0.272
+.280 Remington,Remington 165gr Core-Lokt,2820,0.433,0.221
+7mm Rem Magnum,Hornady 162gr ELD-X,3030,0.620,0.317
+7mm Rem Magnum,Hornady 175gr ELD-X,2950,0.689,0.349
+7mm Rem Magnum,Federal 160gr Trophy Bonded Tip,2940,0.531,0.272
+7mm Rem Magnum,Nosler 160gr AccuBond,3050,0.531,0.272
+7mm Rem Magnum,Remington 175gr Core-Lokt,2860,0.505,0.257
+.30-30 Winchester,Hornady 160gr FTX LEVERevolution,2400,0.330,0.167
+.30-30 Winchester,Winchester 150gr Power-Point,2390,0.294,0.150
+.30-30 Winchester,Federal 150gr Flat Nose,2390,0.186,0.094
+.30-30 Winchester,Remington 170gr Core-Lokt,2200,0.252,0.128
+.308 Winchester,Federal 168gr Gold Medal Sierra MatchKing,2650,0.462,0.235
+.308 Winchester,Federal 175gr Gold Medal Sierra MatchKing,2600,0.505,0.257
+.308 Winchester,Hornady 168gr ELD-M,2650,0.523,0.267
+.308 Winchester,Hornady 175gr ELD-M,2600,0.530,0.271
+.308 Winchester,Berger 175gr Hybrid Target,2600,0.536,0.274
+.308 Winchester,Lapua 185gr Scenar,2575,0.560,0.287
+.308 Winchester,Black Hills 175gr Sierra MatchKing,2600,0.505,0.257
+.30-06 Springfield,Federal 168gr Gold Medal Sierra MatchKing,2700,0.447,0.228
+.30-06 Springfield,Hornady 178gr ELD-X,2750,0.552,0.281
+.30-06 Springfield,Nosler 180gr AccuBond,2700,0.507,0.259
+.30-06 Springfield,Remington 180gr Core-Lokt,2700,0.382,0.195
+.30-06 Springfield,Winchester 180gr Power-Point,2700,0.382,0.195
+.30-06 Springfield,Federal 150gr Trophy Bonded Tip,2910,0.415,0.212
+.300 WSM,Hornady 178gr ELD-X,2960,0.552,0.281
+.300 WSM,Federal 180gr Trophy Bonded Tip,2970,0.507,0.259
+.300 WSM,Nosler 180gr AccuBond,2970,0.507,0.259
+.300 WSM,Winchester 180gr Ballistic Silvertip,2970,0.507,0.259
+.300 Win Magnum,Hornady 178gr ELD-X,3120,0.552,0.281
+.300 Win Magnum,Hornady 200gr ELD-X,2850,0.597,0.305
+.300 Win Magnum,Federal 190gr Gold Medal Sierra MatchKing,2900,0.533,0.275
+.300 Win Magnum,Federal 180gr Trophy Bonded Tip,3100,0.507,0.259
+.300 Win Magnum,Nosler 190gr AccuBond LR,3000,0.620,0.318
+.300 Win Magnum,Remington 180gr Core-Lokt,2960,0.382,0.195
+.300 Win Magnum,Federal 168gr Gold Medal Sierra MatchKing,2930,0.447,0.228
+300 Norma Magnum,Hornady 225gr ELD-M,3050,0.777,0.391
+300 Norma Magnum,Berger 215gr Hybrid Target,3050,0.730,0.368
+300 Norma Magnum,Lapua 230gr Scenar-L,2970,0.750,0.380
