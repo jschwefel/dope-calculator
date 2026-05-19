@@ -4,62 +4,135 @@
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-    outputDistances: [],
-    calculatedResults: {},  // distance_str -> mils
+    outputDistances: [],    // in current display unit
+    calculatedResults: {},  // display_dist_str -> display_adj
+    distUnit: 'yd',         // 'yd' | 'm'
+    adjUnit: 'mrad',        // 'mrad' | 'moa'
 };
+
+// ── Conversion ────────────────────────────────────────────────────────────────
+const YD_PER_M    = 1.093613;   // yards per meter
+const MOA_PER_MIL = 3.43775;    // MOA per milliradian
+
+function toYards(v)  { return state.distUnit === 'm' ? v * YD_PER_M : v; }
+function toMils(v)   { return state.adjUnit  === 'moa' ? v / MOA_PER_MIL : v; }
+function fromMils(v) { return state.adjUnit  === 'moa' ? v * MOA_PER_MIL : v; }
+
+function distLabel()  { return state.distUnit === 'm'   ? 'm'   : 'yd'; }
+function adjLabel()   { return state.adjUnit  === 'moa' ? 'MOA' : 'mil'; }
+function clickValue() { return state.adjUnit  === 'moa' ? 0.25  : 0.1; }
+function adjDecimals(){ return state.adjUnit  === 'moa' ? 2     : 1; }
+
+function fmtAdj(v) {
+    if (v === 0) return '0.' + '0'.repeat(adjDecimals());
+    return (v > 0 ? '+' : '') + v.toFixed(adjDecimals());
+}
+
+function adjClass(v) {
+    if (v > 0) return 'adj-pos';
+    if (v < 0) return 'adj-neg';
+    return 'adj-zero';
+}
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-function toast(msg, type = "") {
-    const el = $("toast");
+function toast(msg, type = '') {
+    const el = $('toast');
     el.textContent = msg;
-    el.className = `toast${type ? " " + type : ""}`;
-    el.classList.remove("hidden");
+    el.className = `toast${type ? ' ' + type : ''}`;
+    el.classList.remove('hidden');
     clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.add("hidden"), 3000);
+    el._t = setTimeout(() => el.classList.add('hidden'), 3000);
 }
 
+// ── Apply units — update all labels across the page ───────────────────────────
+function applyUnits() {
+    const dl = distLabel();
+    const al = adjLabel();
+    const cv = clickValue();
+
+    $('dope-dist-header').textContent    = `Distance (${dl})`;
+    $('dope-adj-header').textContent     = `Adjustment (${al})`;
+    $('zero-yards-label').textContent    = `Zero Distance (${dl})`;
+    $('results-dist-header').textContent = `Distance (${dl})`;
+    $('results-adj-header').textContent  = `Adjustment (${al})`;
+    $('results-clicks-header').textContent = `Clicks (${cv} ${al})`;
+    $('new-distance').placeholder        = `Custom distance (${dl})`;
+
+    document.querySelectorAll('.dist-chip span.dist-blue').forEach(el => {
+        const d = el.dataset.rawDist;
+        if (d !== undefined) el.textContent = `${d} ${dl}`;
+    });
+}
+
+// ── Unit selectors ─────────────────────────────────────────────────────────────
+$('dist-unit').addEventListener('change', function () {
+    state.distUnit = this.value;
+    // Clear distances and results — user must re-enter in new unit
+    state.outputDistances = [];
+    state.calculatedResults = {};
+    renderDistances();
+    $('results-table').classList.add('hidden');
+    updateStickerPreview();
+    applyUnits();
+    lsSave();
+    toast(`Distances now in ${distLabel()}`, 'success');
+});
+
+$('adj-unit').addEventListener('change', function () {
+    state.adjUnit = this.value;
+    state.calculatedResults = {};
+    $('results-table').classList.add('hidden');
+    updateStickerPreview();
+    applyUnits();
+    lsSave();
+    toast(`Adjustments now in ${adjLabel()}`, 'success');
+});
+
 // ── localStorage persistence ──────────────────────────────────────────────────
-const LS_FIELDS = ["velocity-fps", "bc-g7", "bc-g1", "bc-model",
-                   "zero-yards", "sight-height-in", "temp-f", "altitude-ft"];
+const LS_FIELDS = ['velocity-fps', 'bc-g7', 'bc-g1', 'bc-model',
+                   'zero-yards', 'sight-height-in', 'temp-f', 'altitude-ft',
+                   'dist-unit', 'adj-unit'];
 
 function lsSave() {
     LS_FIELDS.forEach(id => {
         const el = $(id);
-        if (el) localStorage.setItem("dope_" + id, el.value);
+        if (el) localStorage.setItem('dope_' + id, el.value);
     });
 }
 
 function lsRestore() {
     LS_FIELDS.forEach(id => {
-        const saved = localStorage.getItem("dope_" + id);
+        const saved = localStorage.getItem('dope_' + id);
         const el = $(id);
         if (saved !== null && el) el.value = saved;
     });
-    // Apply bc-model visibility after restoring
-    _applyBcModel($("bc-model").value);
+    state.distUnit = $('dist-unit').value;
+    state.adjUnit  = $('adj-unit').value;
+    _applyBcModel($('bc-model').value);
+    applyUnits();
 }
 
 LS_FIELDS.forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener("change", lsSave);
+    if (el) el.addEventListener('change', lsSave);
 });
 
 // ── BC model selector ─────────────────────────────────────────────────────────
 function _applyBcModel(model) {
-    $("field-bc-g7").classList.toggle("hidden", model !== "g7");
-    $("field-bc-g1").classList.toggle("hidden", model !== "g1");
+    $('field-bc-g7').classList.toggle('hidden', model !== 'g7');
+    $('field-bc-g1').classList.toggle('hidden', model !== 'g1');
 }
 
-$("bc-model").addEventListener("change", function () {
+$('bc-model').addEventListener('change', function () {
     _applyBcModel(this.value);
     lsSave();
 });
 
 // ── Ammo selector ─────────────────────────────────────────────────────────────
 function filterAmmoByCAliber(caliber) {
-    const sel = $("ammo-select");
+    const sel = $('ammo-select');
     let firstVisible = null;
     [...sel.options].forEach(opt => {
         const show = opt.dataset.caliber === caliber;
@@ -68,155 +141,145 @@ function filterAmmoByCAliber(caliber) {
     });
     if (firstVisible) {
         sel.value = firstVisible.value;
-        sel.dispatchEvent(new Event("change"));
+        sel.dispatchEvent(new Event('change'));
     }
 }
 
-$("caliber-select").addEventListener("change", function () {
+$('caliber-select').addEventListener('change', function () {
     filterAmmoByCAliber(this.value);
 });
 
-$("ammo-select").addEventListener("change", function () {
+$('ammo-select').addEventListener('change', function () {
     const opt = this.selectedOptions[0];
     if (opt) {
-        $("velocity-fps").value = opt.dataset.velocity;
-        $("bc-g7").value = opt.dataset.bcg7;
-        $("bc-g1").value = opt.dataset.bcg1;
+        $('velocity-fps').value = opt.dataset.velocity;
+        $('bc-g7').value = opt.dataset.bcg7;
+        $('bc-g1').value = opt.dataset.bcg1;
         lsSave();
     }
 });
 
-// trigger on load
-filterAmmoByCAliber($("caliber-select").value);
+filterAmmoByCAliber($('caliber-select').value);
 
 // ── Add ammo ──────────────────────────────────────────────────────────────────
-$("btn-show-add-ammo").addEventListener("click", () => {
-    $("add-ammo-form").classList.toggle("hidden");
-    $("edit-ammo-form").classList.add("hidden");
+$('btn-show-add-ammo').addEventListener('click', () => {
+    $('add-ammo-form').classList.toggle('hidden');
+    $('edit-ammo-form').classList.add('hidden');
 });
 
-$("btn-add-ammo").addEventListener("click", async () => {
+$('btn-add-ammo').addEventListener('click', async () => {
     const payload = {
-        caliber: $("new-ammo-caliber").value.trim(),
-        name: $("new-ammo-name").value.trim(),
-        velocity_fps: parseFloat($("new-ammo-vel").value),
-        bc_g1: parseFloat($("new-ammo-bcg1").value),
-        bc_g7: parseFloat($("new-ammo-bcg7").value),
+        caliber:      $('new-ammo-caliber').value.trim(),
+        name:         $('new-ammo-name').value.trim(),
+        velocity_fps: parseFloat($('new-ammo-vel').value),
+        bc_g1:        parseFloat($('new-ammo-bcg1').value),
+        bc_g7:        parseFloat($('new-ammo-bcg7').value),
     };
-    if (!payload.caliber) { toast("Enter caliber", "error"); return; }
-    if (!payload.name)    { toast("Enter ammo name", "error"); return; }
-    const res = await fetch("/api/ammo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    if (!payload.caliber) { toast('Enter caliber', 'error'); return; }
+    if (!payload.name)    { toast('Enter ammo name', 'error'); return; }
+    const res = await fetch('/api/ammo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (res.ok) {
-        toast(`Added: ${data.added}`, "success");
-        location.reload();
-    } else {
-        toast(data.error || "Error adding ammo", "error");
-    }
+    if (res.ok) { toast(`Added: ${data.added}`, 'success'); location.reload(); }
+    else        { toast(data.error || 'Error adding ammo', 'error'); }
 });
 
 // ── Edit ammo ─────────────────────────────────────────────────────────────────
 let _editingOriginalName = null;
 
-$("btn-edit-ammo").addEventListener("click", () => {
-    const opt = $("ammo-select").selectedOptions[0];
-    if (!opt) { toast("Select a load to edit", "error"); return; }
+$('btn-edit-ammo').addEventListener('click', () => {
+    const opt = $('ammo-select').selectedOptions[0];
+    if (!opt) { toast('Select a load to edit', 'error'); return; }
     _editingOriginalName = opt.value;
-    $("edit-ammo-caliber").value = opt.dataset.caliber;
-    $("edit-ammo-name").value    = opt.value;
-    $("edit-ammo-vel").value     = opt.dataset.velocity;
-    $("edit-ammo-bcg1").value    = opt.dataset.bcg1;
-    $("edit-ammo-bcg7").value    = opt.dataset.bcg7;
-    $("edit-ammo-form").classList.remove("hidden");
-    $("add-ammo-form").classList.add("hidden");
+    $('edit-ammo-caliber').value = opt.dataset.caliber;
+    $('edit-ammo-name').value    = opt.value;
+    $('edit-ammo-vel').value     = opt.dataset.velocity;
+    $('edit-ammo-bcg1').value    = opt.dataset.bcg1;
+    $('edit-ammo-bcg7').value    = opt.dataset.bcg7;
+    $('edit-ammo-form').classList.remove('hidden');
+    $('add-ammo-form').classList.add('hidden');
 });
 
-$("btn-cancel-edit-ammo").addEventListener("click", () => {
-    $("edit-ammo-form").classList.add("hidden");
+$('btn-cancel-edit-ammo').addEventListener('click', () => {
+    $('edit-ammo-form').classList.add('hidden');
     _editingOriginalName = null;
 });
 
-$("btn-save-edit-ammo").addEventListener("click", async () => {
+$('btn-save-edit-ammo').addEventListener('click', async () => {
     if (!_editingOriginalName) return;
     const payload = {
-        caliber: $("edit-ammo-caliber").value.trim(),
-        name: $("edit-ammo-name").value.trim(),
-        velocity_fps: parseFloat($("edit-ammo-vel").value),
-        bc_g1: parseFloat($("edit-ammo-bcg1").value),
-        bc_g7: parseFloat($("edit-ammo-bcg7").value),
+        caliber:      $('edit-ammo-caliber').value.trim(),
+        name:         $('edit-ammo-name').value.trim(),
+        velocity_fps: parseFloat($('edit-ammo-vel').value),
+        bc_g1:        parseFloat($('edit-ammo-bcg1').value),
+        bc_g7:        parseFloat($('edit-ammo-bcg7').value),
     };
-    if (!payload.caliber || !payload.name) { toast("Caliber and name required", "error"); return; }
+    if (!payload.caliber || !payload.name) { toast('Caliber and name required', 'error'); return; }
     const res = await fetch(`/api/ammo/${encodeURIComponent(_editingOriginalName)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (res.ok) {
-        toast(`Updated: ${data.updated}`, "success");
-        location.reload();
-    } else {
-        toast(data.error || "Error updating ammo", "error");
-    }
+    if (res.ok) { toast(`Updated: ${data.updated}`, 'success'); location.reload(); }
+    else        { toast(data.error || 'Error updating ammo', 'error'); }
 });
 
-// ── Delete ammo (soft-delete) ─────────────────────────────────────────────────
-$("btn-show-delete-ammo").addEventListener("click", async () => {
-    const name = $("ammo-select").value;
-    if (!name) { toast("Select ammo to delete", "error"); return; }
+// ── Delete ammo ───────────────────────────────────────────────────────────────
+$('btn-show-delete-ammo').addEventListener('click', async () => {
+    const name = $('ammo-select').value;
+    if (!name) { toast('Select ammo to delete', 'error'); return; }
     if (!confirm(`Delete "${name}" from database?`)) return;
-    const res = await fetch(`/api/ammo/${encodeURIComponent(name)}`, { method: "DELETE" });
+    const res = await fetch(`/api/ammo/${encodeURIComponent(name)}`, { method: 'DELETE' });
     const data = await res.json();
-    if (res.ok) {
-        toast(`Deleted: ${name}`, "success");
-        location.reload();
-    } else {
-        toast(data.error || "Error deleting ammo", "error");
-    }
+    if (res.ok) { toast(`Deleted: ${name}`, 'success'); location.reload(); }
+    else        { toast(data.error || 'Error deleting ammo', 'error'); }
 });
 
 // ── DOPE entries ──────────────────────────────────────────────────────────────
-$("dope-entries").appendChild(buildDopeRow());
+$('dope-entries').appendChild(buildDopeRow());
 
-$("btn-add-dope").addEventListener("click", () => {
-    const container = $("dope-entries");
-    if (container.querySelectorAll(".dope-row").length >= 6) {
-        toast("Maximum 6 DOPE entries", "error");
+$('btn-add-dope').addEventListener('click', () => {
+    const container = $('dope-entries');
+    if (container.querySelectorAll('.dope-row').length >= 6) {
+        toast('Maximum 6 DOPE entries', 'error');
         return;
     }
     container.appendChild(buildDopeRow());
 });
 
-$("dope-entries").addEventListener("click", e => {
-    if (e.target.classList.contains("btn-remove-dope")) {
-        e.target.closest(".dope-row").remove();
-    }
+$('dope-entries').addEventListener('click', e => {
+    if (e.target.classList.contains('btn-remove-dope'))
+        e.target.closest('.dope-row').remove();
 });
 
-function buildDopeRow(dist = "", adj = "") {
-    const div = document.createElement("div");
-    div.className = "dope-row";
+function buildDopeRow(dist = '', adj = '') {
+    const div = document.createElement('div');
+    div.className = 'dope-row';
     div.innerHTML = `
-        <div class="field"><input type="number" class="dope-dist" placeholder="e.g. 100" min="10" step="5" value="${dist}"></div>
-        <div class="field"><input type="number" class="dope-adj" placeholder="e.g. 2.9" step="0.1" value="${adj}"></div>
+        <div class="field"><input type="number" class="dope-dist" placeholder="e.g. 100" min="1" step="1" value="${dist}"></div>
+        <div class="field"><input type="number" class="dope-adj" placeholder="e.g. 2.9" step="0.01" value="${adj}"></div>
         <button class="btn-remove-dope btn-danger btn-sm">✕</button>
     `;
     return div;
 }
 
 function getDopeEntries() {
-    const rangeTemp = parseFloat($("range-temp-f").value);
-    const rangeAlt  = parseFloat($("range-altitude-ft").value);
+    // Returns entries converted to internal units (yards, mils)
+    const rangeTemp = parseFloat($('range-temp-f').value);
+    const rangeAlt  = parseFloat($('range-altitude-ft').value);
     const entries = [];
-    document.querySelectorAll(".dope-row").forEach(row => {
-        const dist = parseFloat(row.querySelector(".dope-dist").value);
-        const adj  = parseFloat(row.querySelector(".dope-adj").value);
+    document.querySelectorAll('.dope-row').forEach(row => {
+        const dist = parseFloat(row.querySelector('.dope-dist').value);
+        const adj  = parseFloat(row.querySelector('.dope-adj').value);
         if (!isNaN(dist) && !isNaN(adj)) {
-            const e = { distance: dist, adjustment: adj };
+            const e = {
+                distance:   toYards(dist),
+                adjustment: toMils(adj),
+            };
             if (!isNaN(rangeTemp)) e.temp_f = rangeTemp;
             if (!isNaN(rangeAlt))  e.altitude_ft = rangeAlt;
             entries.push(e);
@@ -227,117 +290,123 @@ function getDopeEntries() {
 
 // ── Output distances ──────────────────────────────────────────────────────────
 function renderDistances() {
-    const grid = $("output-distances");
-    grid.innerHTML = "";
+    const grid = $('output-distances');
+    grid.innerHTML = '';
+    const dl = distLabel();
     state.outputDistances.forEach(d => {
-        const chip = document.createElement("div");
-        chip.className = "dist-chip";
-        chip.innerHTML = `<span class="dist-blue">${d} yd</span><span class="remove-dist" data-dist="${d}">✕</span>`;
+        const chip = document.createElement('div');
+        chip.className = 'dist-chip';
+        chip.innerHTML = `<span class="dist-blue" data-raw-dist="${d}">${d} ${dl}</span><span class="remove-dist" data-dist="${d}">✕</span>`;
         grid.appendChild(chip);
     });
 }
 
-$("output-distances").addEventListener("click", e => {
-    if (e.target.classList.contains("remove-dist")) {
+$('output-distances').addEventListener('click', e => {
+    if (e.target.classList.contains('remove-dist')) {
         const d = parseFloat(e.target.dataset.dist);
         state.outputDistances = state.outputDistances.filter(x => x !== d);
         renderDistances();
     }
 });
 
-$("btn-add-distance").addEventListener("click", addDistance);
-$("new-distance").addEventListener("keydown", e => { if (e.key === "Enter") addDistance(); });
+$('btn-add-distance').addEventListener('click', addDistance);
+$('new-distance').addEventListener('keydown', e => { if (e.key === 'Enter') addDistance(); });
 
 function addDistance(val) {
-    if (typeof val !== "number") val = parseFloat($("new-distance").value);
-    if (isNaN(val) || val < 1) { toast("Enter a valid distance", "error"); return; }
-    if (state.outputDistances.length >= 10) { toast("Maximum 10 distances", "error"); return; }
+    if (typeof val !== 'number') val = parseFloat($('new-distance').value);
+    if (isNaN(val) || val < 1) { toast('Enter a valid distance', 'error'); return; }
+    if (state.outputDistances.length >= 10) { toast('Maximum 10 distances', 'error'); return; }
     if (!state.outputDistances.includes(val)) {
         state.outputDistances.push(val);
         state.outputDistances.sort((a, b) => a - b);
         renderDistances();
     }
-    $("new-distance").value = "";
+    $('new-distance').value = '';
 }
 
-// Quick-add presets
-document.querySelectorAll(".btn-preset").forEach(btn => {
-    btn.addEventListener("click", () => addDistance(parseFloat(btn.dataset.dist)));
+document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => addDistance(parseFloat(btn.dataset.dist)));
 });
 
 // ── Calculate ─────────────────────────────────────────────────────────────────
-$("btn-calculate").addEventListener("click", async () => {
+$('btn-calculate').addEventListener('click', async () => {
     if (state.outputDistances.length === 0) {
-        toast("Add at least one output distance", "error");
+        toast('Add at least one output distance', 'error');
         return;
     }
-    const bcModel = $("bc-model").value;
+
+    const bcModel = $('bc-model').value;
+
+    // Build yards-keyed lookup so we can map API response back to display values
+    const distMap = {};
+    const outputYards = state.outputDistances.map(d => {
+        const yards = toYards(d);
+        distMap[Math.round(yards)] = d;
+        return yards;
+    });
+
     const payload = {
-        ammo_name:       $("ammo-select").value,
-        velocity_fps:    parseFloat($("velocity-fps").value),
-        bc_g7:           parseFloat($("bc-g7").value),
-        bc_g1:           parseFloat($("bc-g1").value),
-        bc_model:        bcModel,
-        zero_yards:      parseFloat($("zero-yards").value),
-        sight_height_in: parseFloat($("sight-height-in").value),
-        altitude_ft:     parseFloat($("altitude-ft").value),
-        temp_f:          parseFloat($("temp-f").value),
-        dope_entries:    getDopeEntries(),
-        output_distances: state.outputDistances,
+        velocity_fps:     parseFloat($('velocity-fps').value),
+        bc_g7:            parseFloat($('bc-g7').value),
+        bc_g1:            parseFloat($('bc-g1').value),
+        bc_model:         bcModel,
+        zero_yards:       toYards(parseFloat($('zero-yards').value)),
+        sight_height_in:  parseFloat($('sight-height-in').value),
+        altitude_ft:      parseFloat($('altitude-ft').value),
+        temp_f:           parseFloat($('temp-f').value),
+        dope_entries:     getDopeEntries(),
+        output_distances: outputYards,
     };
 
-    const res = await fetch("/api/calculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok) { toast(data.error || "Calculation failed", "error"); return; }
+    if (!res.ok) { toast(data.error || 'Calculation failed', 'error'); return; }
 
-    state.calculatedResults = data.results;
+    // Convert results from yards/mils to display units; key by display dist
+    state.calculatedResults = {};
+    Object.entries(data.results).forEach(([yardsKey, mils]) => {
+        const displayDist = distMap[parseInt(yardsKey)] ?? parseFloat(yardsKey);
+        state.calculatedResults[String(displayDist)] = fromMils(mils);
+    });
+
     renderResultsTable();
-    $("results-table").classList.remove("hidden");
+    $('results-table').classList.remove('hidden');
     updateStickerPreview();
-    $("pdf-section").scrollIntoView({ behavior: "smooth" });
+    $('pdf-section').scrollIntoView({ behavior: 'smooth' });
 });
 
-function fmtAdj(v) {
-    if (v === 0) return "0.0";
-    return (v > 0 ? "+" : "") + v.toFixed(1);
-}
-
-function adjClass(v) {
-    if (v > 0) return "adj-pos";
-    if (v < 0) return "adj-neg";
-    return "adj-zero";
-}
-
 function renderResultsTable() {
-    const tbody = document.querySelector("#results tbody");
-    tbody.innerHTML = "";
+    const tbody = document.querySelector('#results tbody');
+    tbody.innerHTML = '';
+    const cv = clickValue();
+
     Object.entries(state.calculatedResults)
         .sort(([a], [b]) => Number(a) - Number(b))
-        .forEach(([dist, mils]) => {
-            const clicks = Math.round(mils / 0.1);
-            const tr = document.createElement("tr");
+        .forEach(([dist, adj]) => {
+            const clicks = Math.round(adj / cv);
+            const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="dist-blue">${dist}</td>
-                <td class="${adjClass(mils)}">${fmtAdj(mils)}</td>
-                <td class="${adjClass(mils)}">${clicks > 0 ? "+" : ""}${clicks}</td>
-                <td><input type="checkbox" class="sticker-check" data-dist="${dist}" data-mils="${mils}" checked></td>
+                <td class="${adjClass(adj)}">${fmtAdj(adj)}</td>
+                <td class="${adjClass(adj)}">${clicks > 0 ? '+' : ''}${clicks}</td>
+                <td><input type="checkbox" class="sticker-check" data-dist="${dist}" data-adj="${adj}" checked></td>
             `;
             tbody.appendChild(tr);
         });
-    // Refresh preview whenever checkboxes change
-    document.querySelectorAll(".sticker-check").forEach(cb => {
-        cb.addEventListener("change", updateStickerPreview);
+
+    document.querySelectorAll('.sticker-check').forEach(cb => {
+        cb.addEventListener('change', updateStickerPreview);
     });
 }
 
 // ── Sticker preview ───────────────────────────────────────────────────────────
 function updateStickerPreview() {
-    const checked = [...document.querySelectorAll(".sticker-check:checked")];
-    const preview = $("sticker-preview");
+    const checked = [...document.querySelectorAll('.sticker-check:checked')];
+    const preview = $('sticker-preview');
 
     if (checked.length === 0) {
         preview.innerHTML = '<span class="preview-placeholder">No distances selected</span>';
@@ -345,28 +414,30 @@ function updateStickerPreview() {
     }
 
     const entries = checked
-        .map(cb => ({ distance: Number(cb.dataset.dist), mils: Number(cb.dataset.mils) }))
+        .map(cb => ({ distance: Number(cb.dataset.dist), adj: Number(cb.dataset.adj) }))
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 10);
 
-    // Build pairs (left column, right column) matching PDF layout
     const pairs = [];
-    for (let i = 0; i < entries.length; i += 2) {
+    for (let i = 0; i < entries.length; i += 2)
         pairs.push([entries[i], entries[i + 1] || null]);
-    }
 
-    let rows = "";
+    let rows = '';
     pairs.forEach(([left, right]) => {
+        const lc = left.adj > 0 ? 'p-green' : left.adj < 0 ? 'p-red' : 'p-gray';
+        const rc = right ? (right.adj > 0 ? 'p-green' : right.adj < 0 ? 'p-red' : 'p-gray') : '';
         rows += `<div class="preview-row">
             <div class="preview-half preview-left">
-                <span class="preview-adj ${left.mils > 0 ? 'p-green' : left.mils < 0 ? 'p-red' : 'p-gray'}">${fmtAdj(left.mils)}</span>
+                <span class="preview-adj ${lc}">${fmtAdj(left.adj)}</span>
                 <span class="preview-dist">${left.distance}</span>
             </div>
             <div class="preview-divider"></div>
-            ${right ? `<div class="preview-half preview-right">
-                <span class="preview-dist">${right.distance}</span>
-                <span class="preview-adj ${right.mils > 0 ? 'p-green' : right.mils < 0 ? 'p-red' : 'p-gray'}">${fmtAdj(right.mils)}</span>
-            </div>` : '<div class="preview-half preview-right"></div>'}
+            ${right
+                ? `<div class="preview-half preview-right">
+                       <span class="preview-dist">${right.distance}</span>
+                       <span class="preview-adj ${rc}">${fmtAdj(right.adj)}</span>
+                   </div>`
+                : '<div class="preview-half preview-right"></div>'}
         </div>`;
     });
 
@@ -378,40 +449,34 @@ let selectedRow = 1;
 let selectedCol = 1;
 
 function buildLabelGrid() {
-    const grid = $("label-grid");
+    const grid = $('label-grid');
     for (let r = 1; r <= 5; r++) {
         for (let c = 1; c <= 4; c++) {
-            const cell = document.createElement("div");
-            cell.className = "grid-cell";
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
             cell.dataset.row = r;
             cell.dataset.col = c;
             cell.textContent = `R${r}C${c}`;
-            if (r === 1 && c === 1) cell.classList.add("selected");
-            cell.addEventListener("click", () => {
-                document.querySelectorAll(".grid-cell").forEach(el => el.classList.remove("selected"));
-                cell.classList.add("selected");
+            if (r === 1 && c === 1) cell.classList.add('selected');
+            cell.addEventListener('click', () => {
+                document.querySelectorAll('.grid-cell').forEach(el => el.classList.remove('selected'));
+                cell.classList.add('selected');
                 selectedRow = r;
                 selectedCol = c;
-                $("label-row").value = r;
-                $("label-col").value = c;
+                $('label-row').value = r;
+                $('label-col').value = c;
             });
             grid.appendChild(cell);
         }
     }
 }
 
-$("label-row").addEventListener("change", function () {
-    selectedRow = parseInt(this.value);
-    syncGridSelection();
-});
-$("label-col").addEventListener("change", function () {
-    selectedCol = parseInt(this.value);
-    syncGridSelection();
-});
+$('label-row').addEventListener('change', function () { selectedRow = parseInt(this.value); syncGridSelection(); });
+$('label-col').addEventListener('change', function () { selectedCol = parseInt(this.value); syncGridSelection(); });
 
 function syncGridSelection() {
-    document.querySelectorAll(".grid-cell").forEach(el => {
-        el.classList.toggle("selected",
+    document.querySelectorAll('.grid-cell').forEach(el => {
+        el.classList.toggle('selected',
             parseInt(el.dataset.row) === selectedRow && parseInt(el.dataset.col) === selectedCol);
     });
 }
@@ -419,134 +484,147 @@ function syncGridSelection() {
 buildLabelGrid();
 
 // ── Generate PDF ──────────────────────────────────────────────────────────────
-$("btn-generate-pdf").addEventListener("click", async () => {
-    const checked = [...document.querySelectorAll(".sticker-check:checked")];
-    if (checked.length === 0) {
-        toast("No distances selected for sticker", "error");
-        return;
-    }
-    if (checked.length > 10) {
-        toast("Maximum 10 entries on sticker", "error");
-        return;
-    }
+$('btn-generate-pdf').addEventListener('click', async () => {
+    const checked = [...document.querySelectorAll('.sticker-check:checked')];
+    if (checked.length === 0) { toast('No distances selected for sticker', 'error'); return; }
+    if (checked.length > 10)  { toast('Maximum 10 entries on sticker', 'error'); return; }
 
     const dopeData = checked
-        .map(cb => ({ distance: Number(cb.dataset.dist), adjustment: Number(cb.dataset.mils) }))
+        .map(cb => ({ distance: Number(cb.dataset.dist), adjustment: Number(cb.dataset.adj) }))
         .sort((a, b) => a.distance - b.distance);
 
     const payload = {
         dope_data:    dopeData,
         label_row:    selectedRow,
         label_col:    selectedCol,
-        session_name: $("session-name").value.trim(),
-        offset_x_in:  parseFloat($("offset-x").value) || 0,
-        offset_y_in:  parseFloat($("offset-y").value) || 0,
-        fill_sheet:   $("fill-sheet").checked,
+        session_name: $('session-name').value.trim(),
+        offset_x_in:  parseFloat($('offset-x').value) || 0,
+        offset_y_in:  parseFloat($('offset-y').value) || 0,
+        fill_sheet:   $('fill-sheet').checked,
     };
 
-    const res = await fetch("/api/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
         const data = await res.json();
-        toast(data.error || "PDF generation failed", "error");
+        toast(data.error || 'PDF generation failed', 'error');
         return;
     }
 
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
+    const a    = document.createElement('a');
     a.href     = url;
-    const sessionName = $("session-name").value.trim();
-    a.download = sessionName ? sessionName.replace(/ /g, "_") + ".pdf" : "dope-sticker.pdf";
+    const sessionName = $('session-name').value.trim();
+    a.download = sessionName ? sessionName.replace(/ /g, '_') + '.pdf' : 'dope-sticker.pdf';
     a.click();
     URL.revokeObjectURL(url);
-    toast("PDF downloaded", "success");
+    toast('PDF downloaded', 'success');
 });
 
 // ── Sessions ──────────────────────────────────────────────────────────────────
 function _collectSessionData() {
-    const rangeTemp = parseFloat($("range-temp-f").value);
-    const rangeAlt  = parseFloat($("range-altitude-ft").value);
+    const rangeTemp = parseFloat($('range-temp-f').value);
+    const rangeAlt  = parseFloat($('range-altitude-ft').value);
     return {
-        session_name:      $("session-name").value.trim(),
-        ammo_name:         $("ammo-select").value,
-        velocity_fps:      parseFloat($("velocity-fps").value),
-        bc_g7:             parseFloat($("bc-g7").value),
-        bc_g1:             parseFloat($("bc-g1").value),
-        bc_model:          $("bc-model").value,
-        zero_yards:        parseFloat($("zero-yards").value),
-        sight_height_in:   parseFloat($("sight-height-in").value),
-        temp_f:            parseFloat($("temp-f").value),
-        altitude_ft:       parseFloat($("altitude-ft").value),
+        session_name:      $('session-name').value.trim(),
+        dist_unit:         state.distUnit,
+        adj_unit:          state.adjUnit,
+        ammo_name:         $('ammo-select').value,
+        velocity_fps:      parseFloat($('velocity-fps').value),
+        bc_g7:             parseFloat($('bc-g7').value),
+        bc_g1:             parseFloat($('bc-g1').value),
+        bc_model:          $('bc-model').value,
+        zero_yards:        parseFloat($('zero-yards').value),
+        sight_height_in:   parseFloat($('sight-height-in').value),
+        temp_f:            parseFloat($('temp-f').value),
+        altitude_ft:       parseFloat($('altitude-ft').value),
         range_temp_f:      isNaN(rangeTemp) ? null : rangeTemp,
         range_altitude_ft: isNaN(rangeAlt)  ? null : rangeAlt,
-        dope_entries:      getDopeEntries(),
+        dope_entries_raw:  _rawDopeEntries(),   // in display units
         output_distances:  state.outputDistances,
     };
 }
 
+function _rawDopeEntries() {
+    const entries = [];
+    document.querySelectorAll('.dope-row').forEach(row => {
+        const dist = parseFloat(row.querySelector('.dope-dist').value);
+        const adj  = parseFloat(row.querySelector('.dope-adj').value);
+        if (!isNaN(dist) && !isNaN(adj)) entries.push({ distance: dist, adjustment: adj });
+    });
+    return entries;
+}
+
 function _applySessionData(data) {
-    $("session-name").value = data.session_name || "";
+    // Restore units first so labels update before values are set
+    if (data.dist_unit) { $('dist-unit').value = data.dist_unit; state.distUnit = data.dist_unit; }
+    if (data.adj_unit)  { $('adj-unit').value  = data.adj_unit;  state.adjUnit  = data.adj_unit; }
+    applyUnits();
+
+    $('session-name').value = data.session_name || '';
     if (data.ammo_name) {
-        const opt = [...$("ammo-select").options].find(o => o.value === data.ammo_name);
-        if (opt) $("ammo-select").value = data.ammo_name;
-        $("ammo-select").dispatchEvent(new Event("change"));
+        const opt = [...$('ammo-select').options].find(o => o.value === data.ammo_name);
+        if (opt) $('ammo-select').value = data.ammo_name;
+        $('ammo-select').dispatchEvent(new Event('change'));
     }
-    if (data.velocity_fps)    $("velocity-fps").value    = data.velocity_fps;
-    if (data.bc_g7)           $("bc-g7").value           = data.bc_g7;
-    if (data.bc_g1)           $("bc-g1").value           = data.bc_g1;
-    if (data.bc_model)        { $("bc-model").value = data.bc_model; _applyBcModel(data.bc_model); }
-    if (data.zero_yards)      $("zero-yards").value      = data.zero_yards;
-    if (data.sight_height_in) $("sight-height-in").value = data.sight_height_in;
-    if (data.temp_f)          $("temp-f").value          = data.temp_f;
-    if (data.altitude_ft !== undefined) $("altitude-ft").value = data.altitude_ft;
+    if (data.velocity_fps)    $('velocity-fps').value    = data.velocity_fps;
+    if (data.bc_g7)           $('bc-g7').value           = data.bc_g7;
+    if (data.bc_g1)           $('bc-g1').value           = data.bc_g1;
+    if (data.bc_model)        { $('bc-model').value = data.bc_model; _applyBcModel(data.bc_model); }
+    if (data.zero_yards)      $('zero-yards').value      = data.zero_yards;
+    if (data.sight_height_in) $('sight-height-in').value = data.sight_height_in;
+    if (data.temp_f)          $('temp-f').value          = data.temp_f;
+    if (data.altitude_ft !== undefined) $('altitude-ft').value = data.altitude_ft;
 
-    $("range-temp-f").value      = data.range_temp_f      ?? "";
-    $("range-altitude-ft").value = data.range_altitude_ft ?? "";
+    $('range-temp-f').value      = data.range_temp_f      ?? '';
+    $('range-altitude-ft').value = data.range_altitude_ft ?? '';
 
-    const container = $("dope-entries");
-    container.innerHTML = "";
-    (data.dope_entries || []).forEach(e => container.appendChild(buildDopeRow(e.distance, e.adjustment)));
-    if (!container.querySelector(".dope-row")) container.appendChild(buildDopeRow());
+    const container = $('dope-entries');
+    container.innerHTML = '';
+    // Support both old format (dope_entries with yards/mils) and new format (dope_entries_raw in display units)
+    const entries = data.dope_entries_raw || data.dope_entries || [];
+    entries.forEach(e => container.appendChild(buildDopeRow(e.distance, e.adjustment)));
+    if (!container.querySelector('.dope-row')) container.appendChild(buildDopeRow());
 
     state.outputDistances = data.output_distances || [];
     renderDistances();
     lsSave();
 }
 
-$("btn-save-session").addEventListener("click", () => {
+$('btn-save-session').addEventListener('click', () => {
     const data = _collectSessionData();
-    const name = data.session_name || "dope-session";
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const name = data.session_name || 'dope-session';
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
+    const a    = document.createElement('a');
     a.href     = url;
-    a.download = name.replace(/ /g, "_") + ".dope";
+    a.download = name.replace(/ /g, '_') + '.dope';
     a.click();
     URL.revokeObjectURL(url);
-    toast("Saved " + a.download, "success");
+    toast('Saved ' + a.download, 'success');
 });
 
-$("btn-load-session").addEventListener("click", () => $("file-load-input").click());
+$('btn-load-session').addEventListener('click', () => $('file-load-input').click());
 
-$("file-load-input").addEventListener("change", function () {
+$('file-load-input').addEventListener('change', function () {
     const file = this.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = e => {
         try {
             _applySessionData(JSON.parse(e.target.result));
-            toast("Loaded " + file.name, "success");
+            toast('Loaded ' + file.name, 'success');
         } catch {
-            toast("Invalid .dope file", "error");
+            toast('Invalid .dope file', 'error');
         }
     };
     reader.readAsText(file);
-    this.value = "";
+    this.value = '';
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
