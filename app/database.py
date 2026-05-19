@@ -23,13 +23,14 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS ammo (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
                 caliber       TEXT    NOT NULL,
-                name          TEXT    NOT NULL UNIQUE,
+                name          TEXT    NOT NULL,
                 velocity_fps  REAL    NOT NULL,
                 bc_g1         REAL    NOT NULL,
                 bc_g7         REAL    NOT NULL,
                 deleted       INTEGER NOT NULL DEFAULT 0,
                 deleted_by_ip TEXT,
-                deleted_at    TEXT
+                deleted_at    TEXT,
+                UNIQUE(caliber, name)
             );
             CREATE TABLE IF NOT EXISTS ip_bans (
                 id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,10 +71,10 @@ def caliber_list() -> list[str]:
     return seen
 
 
-def ammo_exists(name: str) -> bool:
+def ammo_exists(caliber: str, name: str) -> bool:
     with _connect() as conn:
         return conn.execute(
-            "SELECT 1 FROM ammo WHERE name=? AND deleted=0", (name,)
+            "SELECT 1 FROM ammo WHERE caliber=? AND name=? AND deleted=0", (caliber, name)
         ).fetchone() is not None
 
 

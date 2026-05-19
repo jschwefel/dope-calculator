@@ -133,8 +133,8 @@ def add_ammo():
         if field not in entry:
             return jsonify({"error": f"Missing field: {field}"}), 400
 
-    if db.ammo_exists(entry["name"]):
-        return jsonify({"error": f"Ammo '{entry['name']}' already exists"}), 409
+    if db.ammo_exists(entry["caliber"], entry["name"]):
+        return jsonify({"error": f"Ammo '{entry['name']}' already exists for caliber '{entry['caliber']}'"}), 409
 
     db.add_ammo({
         "caliber": entry["caliber"],
@@ -156,10 +156,11 @@ def edit_ammo(name: str):
         return banned
 
     updates = request.get_json(force=True)
-    new_name = updates.get("name", name)
+    new_name    = updates.get("name", name)
+    new_caliber = updates.get("caliber", "")
 
-    if new_name != name and db.ammo_exists(new_name):
-        return jsonify({"error": f"Ammo '{new_name}' already exists"}), 409
+    if (new_name != name or new_caliber) and db.ammo_exists(new_caliber or name, new_name):
+        return jsonify({"error": f"Ammo '{new_name}' already exists for that caliber"}), 409
 
     castable = {}
     for k, cast in (("caliber", str), ("name", str),
