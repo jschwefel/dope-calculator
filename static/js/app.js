@@ -247,15 +247,10 @@ $('btn-show-delete-ammo').addEventListener('click', async () => {
 });
 
 // ── DOPE entries ──────────────────────────────────────────────────────────────
-$('dope-entries').appendChild(buildDopeRow());
+['', '', ''].forEach(() => $('dope-entries').appendChild(buildDopeRow()));
 
 $('btn-add-dope').addEventListener('click', () => {
-    const container = $('dope-entries');
-    if (container.querySelectorAll('.dope-row').length >= 6) {
-        toast('Maximum 6 DOPE entries', 'error');
-        return;
-    }
-    container.appendChild(buildDopeRow());
+    $('dope-entries').appendChild(buildDopeRow());
 });
 
 $('dope-entries').addEventListener('click', e => {
@@ -339,6 +334,10 @@ document.querySelectorAll('.btn-preset').forEach(btn => {
 $('btn-calculate').addEventListener('click', async () => {
     if (state.outputDistances.length === 0) {
         toast('Add at least one output distance', 'error');
+        return;
+    }
+    if (getDopeEntries().length < 3) {
+        toast('Enter at least 3 Range DOPE entries', 'error');
         return;
     }
 
