@@ -29,7 +29,7 @@ DOPE (Data Observed from Previous Engagements) is the shooter's record of actual
 ### Workflow
 
 1. Enter your ammunition's muzzle velocity and ballistic coefficient.
-2. Enter up to 6 observed DOPE entries from range sessions (optionally with the temperature and elevation those entries were recorded at).
+2. Enter at least 3 observed DOPE entries from range sessions (optionally with the temperature and elevation those entries were recorded at). There is no upper limit.
 3. Enter match-day conditions (temperature, elevation, zero distance, scope height).
 4. Select the output distances for the sticker (up to 10).
 5. Calculate — the app bias-corrects the ballistic model using your observed data.
@@ -43,15 +43,17 @@ DOPE (Data Observed from Previous Engagements) is the shooter's record of actual
 |---------|--------|
 | Ballistics engine | Point-mass G7 or G1 drag model with numerical integration |
 | Environmental correction | ISA pressure lapse + temperature for air density |
-| Bias-correction interpolation | Observed DOPE entries correct for rifle-specific factors |
+| Bias-correction interpolation | Minimum 3 observed DOPE entries correct for rifle-specific factors |
 | Sight height correction | Geometrically correct barrel-to-scope offset formula |
-| Multi-caliber ammo DB | SQLite database, 26 calibers, ~92 factory loads |
+| Multi-caliber ammo DB | SQLite database, 26 calibers, ~124 factory loads |
 | Ammo management | Add, edit, soft-delete with IP logging |
+| Distance units | Yards or Meters (converted internally for ballistics) |
+| Adjustment units | MRAD (mil) or MOA; MOA values rounded to nearest 0.25 click |
 | In-browser sticker preview | Live circle preview before downloading |
 | Fill entire sheet | Print all 20 Avery 8293 positions in one PDF |
 | Quick-add distance presets | One-click buttons for 25-300 yd |
 | Save/load sessions | Client-side `.dope` JSON files — no server state |
-| localStorage persistence | Velocity, BC, conditions survive browser restarts |
+| localStorage persistence | Velocity, BC, conditions, unit prefs survive browser restarts |
 | Rate limiting | 20 adds/hr, 10 deletes/hr per IP |
 | IP banning | Banned IPs blocked from all mutation endpoints |
 | Printer calibration | Per-axis offset nudge to correct systematic misalignment |
@@ -175,6 +177,9 @@ sudo grep DOPE_ADMIN_KEY /etc/systemd/system/dope-calculator.service
 
 Give the session a name (used as the PDF filename). Save and load sessions as `.dope` files — these are plain JSON and portable between machines.
 
+- **Distance Unit** — Yards or Meters. All input distances and presets use the selected unit. Switching units clears output distances and recalculates headers throughout the UI.
+- **Adjustment Unit** — MRAD (mil) or MOA. DOPE entry fields, results, and sticker preview all reflect the selected unit. MOA values are rounded to the nearest 0.25 (one click).
+
 ### 2. Ammunition
 
 Select a caliber from the dropdown to filter the load list. The selected load auto-fills velocity and BC. Override any value manually.
@@ -186,7 +191,7 @@ Select a caliber from the dropdown to filter the load list. The selected load au
 
 ### 3. Range DOPE Entries
 
-Enter up to 6 distance/adjustment pairs from actual range sessions. Optionally record the temperature and elevation the data was collected at — if left blank, match-day conditions are assumed for those entries.
+Enter **at least 3** distance/adjustment pairs from actual range sessions — there is no upper limit. Optionally record the temperature and elevation the data was collected at — if left blank, match-day conditions are assumed for those entries. Distance and adjustment fields respect the unit selectors from the Session section.
 
 ### 4. Match-Day Conditions
 
@@ -199,11 +204,18 @@ Enter up to 6 distance/adjustment pairs from actual range sessions. Optionally r
 
 ### 5. Output Distances
 
-Click preset buttons (25 / 50 / 75 / 100 / 150 / 200 / 250 / 300 yd) or type a custom value. No upper limit. Up to 10 distances per sticker.
+Click preset buttons (25 / 50 / 75 / 100 / 150 / 200 / 250 / 300, in the currently selected distance unit) or type a custom value. No upper limit on individual distances. Up to 10 distances per sticker.
 
 ### 6. Calculate
 
-Click **Calculate DOPE**. Results appear as a table with milliradians and clicks (0.1 mil per click). Uncheck any distances to exclude them from the sticker.
+Click **Calculate DOPE**. Results appear as a table with the selected adjustment unit and a click count:
+
+| Unit | Click size |
+|------|-----------|
+| MRAD | 0.1 mil per click |
+| MOA | 0.25 MOA per click |
+
+MOA adjustments are displayed rounded to the nearest 0.25 click. Uncheck any distances to exclude them from the sticker.
 
 ### 7. Generate Sticker PDF
 
@@ -294,6 +306,8 @@ Sessions are saved as JSON with a `.dope` extension and downloaded directly to t
 ```json
 {
   "session_name": "Rifle 1 - Summer Match",
+  "dist_unit": "yd",
+  "adj_unit": "mrad",
   "ammo_name": "CCI Green Tag",
   "velocity_fps": 1070,
   "bc_g7": 0.067,
@@ -305,13 +319,16 @@ Sessions are saved as JSON with a `.dope` extension and downloaded directly to t
   "altitude_ft": 650,
   "range_temp_f": 72,
   "range_altitude_ft": 850,
-  "dope_entries": [
+  "dope_entries_raw": [
+    { "distance": 50,  "adjustment": 0.0 },
     { "distance": 100, "adjustment": 2.9 },
     { "distance": 200, "adjustment": 9.1 }
   ],
   "output_distances": [50, 100, 150, 200, 250, 300]
 }
 ```
+
+`dist_unit` is `"yd"` or `"m"`. `adj_unit` is `"mrad"` or `"moa"`. `dope_entries_raw` stores distances and adjustments in the display units selected at save time.
 
 ---
 
