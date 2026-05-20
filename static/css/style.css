@@ -16,6 +16,7 @@
     --red: #f44336;
     --border: #2a2a4a;
     --radius: 8px;
+    --amber: #e65100;
 }
 
 body {
@@ -503,9 +504,107 @@ tr:last-child td { border-bottom: none; }
     color: #1565C0;
 }
 
-.p-green { color: #2E7D32; }
-.p-red   { color: #C62828; }
-.p-gray  { color: #555; }
+.p-green  { color: #2E7D32; }
+.p-red    { color: #C62828; }
+.p-gray   { color: #555; }
+.p-amber  { color: var(--amber); }
+
+.adj-amber { color: var(--amber); font-weight: 600; }
+
+/* Wind section ─────────────────────────────────────────────────────────── */
+#wind-details > summary.wind-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+#wind-details > summary.wind-summary::-webkit-details-marker { display: none; }
+#wind-details > summary.wind-summary::marker { display: none; }
+
+#wind-details > summary.wind-summary::before {
+    content: '▶';
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    display: inline-block;
+    transition: transform 0.18s;
+}
+
+#wind-details[open] > summary.wind-summary::before {
+    transform: rotate(90deg);
+}
+
+.wind-summary-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.wind-summary-hint {
+    margin-left: auto;
+}
+
+.wind-body {
+    padding-top: 0.9rem;
+}
+
+.wind-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.compass-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 150px;
+}
+
+.wind-inputs {
+    flex: 1;
+    min-width: 240px;
+}
+
+.wind-batch-section {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.wind-cond-chip {
+    color: var(--amber);
+    border-color: #7a3300;
+}
+
+/* Sticker preview — wind sub-lines ─────────────────────────────────────── */
+.preview-has-wind {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1px !important;
+}
+
+.preview-has-wind.preview-left  { align-items: flex-end !important; }
+.preview-has-wind.preview-right { align-items: flex-start !important; }
+
+.preview-main {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.preview-sub {
+    font-size: 7px;
+    line-height: 1;
+    font-weight: 700;
+    font-family: 'Liberation Sans Narrow', 'Arial Narrow', sans-serif;
+    min-height: 7px;
+}
 
 /* Responsive */
 @media (max-width: 600px) {

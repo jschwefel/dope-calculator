@@ -141,6 +141,84 @@
         <button id="btn-add-dope" class="btn-secondary btn-sm">+ Add Entry</button>
     </section>
 
+    <!-- Wind Conditions (collapsible — closed = calm) -->
+    <section class="card">
+        <details id="wind-details">
+            <summary class="wind-summary">
+                <span class="wind-summary-title">Wind Conditions</span>
+                <span class="hint wind-summary-hint">(collapsed = calm)</span>
+            </summary>
+            <div class="wind-body">
+                <div class="wind-layout">
+                    <!-- Interactive compass -->
+                    <div class="compass-wrap">
+                        <svg id="wind-compass" viewBox="0 0 160 200" width="140" height="175"
+                             style="cursor:pointer;display:block" role="img" aria-label="Wind direction compass">
+                            <!-- Background circle -->
+                            <circle cx="80" cy="90" r="68" fill="#16213e" stroke="#2a2a4a" stroke-width="1.5"/>
+                            <!-- Cardinal ticks -->
+                            <line x1="80" y1="22" x2="80" y2="33" stroke="#444" stroke-width="1.5"/>
+                            <line x1="148" y1="90" x2="137" y2="90" stroke="#444" stroke-width="1.5"/>
+                            <line x1="80" y1="158" x2="80" y2="147" stroke="#444" stroke-width="1.5"/>
+                            <line x1="12" y1="90" x2="23" y2="90" stroke="#444" stroke-width="1.5"/>
+                            <!-- Labels -->
+                            <text x="80" y="16" text-anchor="middle" font-size="9" font-weight="bold" fill="#64B5F6" font-family="system-ui,sans-serif">TARGET</text>
+                            <text x="80" y="25" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">0°</text>
+                            <text x="153" y="93" text-anchor="end" font-size="8" fill="#888" font-family="system-ui,sans-serif">90°</text>
+                            <text x="80" y="172" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">180°</text>
+                            <text x="7" y="93" text-anchor="start" font-size="8" fill="#888" font-family="system-ui,sans-serif">270°</text>
+                            <!-- Wind arrow (translated to compass center, rotated by JS) -->
+                            <g transform="translate(80,90)">
+                                <g id="compass-arrow" transform="rotate(0)">
+                                    <!-- Tail near top, arrowhead pointing toward center (shooter) -->
+                                    <line x1="0" y1="-56" x2="0" y2="-20" stroke="#1e90ff" stroke-width="3" stroke-linecap="round"/>
+                                    <polygon points="0,-8 -6,-22 6,-22" fill="#1e90ff"/>
+                                </g>
+                            </g>
+                            <!-- Shooter dot at center -->
+                            <circle cx="80" cy="90" r="5" fill="#e94560"/>
+                            <!-- Angle and description display -->
+                            <text id="compass-angle-text" x="80" y="186" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e0" font-family="system-ui,sans-serif">0°</text>
+                            <text id="compass-desc-text" x="80" y="197" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">Headwind</text>
+                        </svg>
+                        <p class="hint" style="text-align:center;margin-top:0.25rem;font-size:0.72rem">Click to set direction</p>
+                    </div>
+
+                    <!-- Wind inputs and batch list -->
+                    <div class="wind-inputs">
+                        <div class="field" style="margin-bottom:0.65rem">
+                            <label for="wind-angle">Direction (°)</label>
+                            <input type="number" id="wind-angle" value="0" min="0" max="359" step="1">
+                            <span class="hint">0°=headwind · 90°=R→L · 180°=tailwind · 270°=L→R</span>
+                        </div>
+                        <div class="row" style="margin-bottom:0.65rem">
+                            <div class="field">
+                                <label for="wind-speed">Speed</label>
+                                <input type="number" id="wind-speed" value="10" min="0" max="200" step="0.5">
+                            </div>
+                            <div class="field" style="max-width:90px">
+                                <label for="wind-unit">Unit</label>
+                                <select id="wind-unit">
+                                    <option value="mph" selected>mph</option>
+                                    <option value="fps">ft/s</option>
+                                    <option value="km/h">km/h</option>
+                                    <option value="m/s">m/s</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Batch wind conditions list -->
+                        <div class="wind-batch-section">
+                            <p class="hint" style="margin-bottom:0.35rem">Batch sticker set (up to 10 conditions):</p>
+                            <div id="wind-condition-list" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.4rem"></div>
+                            <button id="btn-add-wind-condition" class="btn-secondary btn-sm">+ Add to Batch</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </section>
+
     <!-- Match-Day Conditions -->
     <section class="card">
         <h2>Match-Day Conditions</h2>
@@ -194,7 +272,7 @@
         <div id="results-table" class="hidden">
             <h3>Calculated Adjustments</h3>
             <table id="results">
-                <thead><tr><th id="results-dist-header">Distance (yd)</th><th id="results-adj-header">Adjustment (mil)</th><th id="results-clicks-header">Clicks (0.1 mil)</th><th>Include in Sticker</th></tr></thead>
+                <thead><tr><th id="results-dist-header">Distance (yd)</th><th id="results-adj-header">Adjustment (mil)</th><th id="results-clicks-header">Clicks (0.1 mil)</th><th id="results-windage-header" class="hidden">Windage (mil)</th><th>Include in Sticker</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -238,6 +316,7 @@
                     </div>
                 </details>
                 <button id="btn-generate-pdf" class="btn-primary btn-lg">Download PDF</button>
+                <button id="btn-generate-batch-pdf" class="btn-secondary btn-lg hidden">Download Batch PDF</button>
             </div>
             <div class="sticker-preview-wrap">
                 <p class="hint">Sticker preview:</p>

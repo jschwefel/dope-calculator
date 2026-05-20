@@ -1,6 +1,9 @@
 """
 PDF generator for Avery 8293 (1.5" round labels, 20-up, 4x5 layout).
-Produces a color-coded two-column DOPE sticker at a specified row/column.
+
+Without wind: two-column layout (adj|dist || dist|adj).
+With wind:    same two-column layout with a windage sub-line below each
+              elevation row, plus a wind-condition label at the top.
 """
 
 import io
@@ -28,74 +31,112 @@ pdfmetrics.registerFont(TTFont(
 PAGE_W = 8.5 * inch
 PAGE_H = 11.0 * inch
 
-LABEL_DIAM = 1.5 * inch
-COLS = 4
-ROWS = 5
+LABEL_DIAM  = 1.5 * inch
+COLS        = 4
+ROWS        = 5
 
-# Avery 8293 geometry — derived from published sheet margins:
-#   top/bottom: 0.75" to label edge  → center row 1 = 0.75 + 0.75 = 1.5"
-#   left/right: 0.50" to label edge  → center col 1 = 0.50 + 0.75 = 1.25"
-#   col pitch:  1.5" label + 0.50" gap = 2.0"   (4 cols × checks: right edge = 1.25+3×2.0+0.75 = 8.0", margin = 0.5" ✓)
-#   row pitch:  1.5" label + 0.50" gap = 2.0"   (5 rows × checks: bottom edge = 1.5+4×2.0+0.75 = 10.25", margin = 0.75" ✓)
-MARGIN_TOP = 1.5 * inch      # top edge to center of row 1
-MARGIN_LEFT = 1.25 * inch    # left edge to center of col 1
-COL_SPACING = 2.0 * inch
-ROW_SPACING = 2.0 * inch
+MARGIN_TOP  = 1.5  * inch   # top edge to center of row 1
+MARGIN_LEFT = 1.25 * inch   # left edge to center of col 1
+COL_SPACING = 2.0  * inch
+ROW_SPACING = 2.0  * inch
 
-BLUE = HexColor("#1565C0")
-RED = HexColor("#C62828")
+BLUE  = HexColor("#1565C0")
+RED   = HexColor("#C62828")
 GREEN = HexColor("#2E7D32")
+AMBER = HexColor("#E65100")   # windage
+GRAY  = HexColor("#666666")   # wind label
 BLACK = colors.black
 WHITE = colors.white
 
 
-def _label_center(
-    row: int,
-    col: int,
-    offset_x_in: float = 0.0,
-    offset_y_in: float = 0.0,
-) -> tuple[float, float]:
-    """
-    Return (cx, cy) in points for 1-indexed row/col.
-    ReportLab origin is bottom-left, so we flip y.
-    offset_x_in / offset_y_in are calibration nudges in inches (+x = right, +y = down).
-    """
+def _label_center(row, col, offset_x_in=0.0, offset_y_in=0.0):
     cx = MARGIN_LEFT + (col - 1) * COL_SPACING + offset_x_in * inch
     cy = PAGE_H - (MARGIN_TOP + (row - 1) * ROW_SPACING + offset_y_in * inch)
     return cx, cy
 
 
+def _parse_entry(entry) -> tuple[float, float, float]:
+    """Accept (dist, adj) or (dist, adj, wind) tuples."""
+    if len(entry) >= 3:
+        return float(entry[0]), float(entry[1]), float(entry[2])
+    return float(entry[0]), float(entry[1]), 0.0
+
+
 def generate_dope_pdf(
-    dope_data: list[tuple[float, float]],
+    dope_data: list,
     label_row: int,
     label_col: int,
     session_name: str = "",
     offset_x_in: float = 0.0,
     offset_y_in: float = 0.0,
     fill_sheet: bool = False,
+    wind_label: str = "",
 ) -> bytes:
     """
     Generate a PDF with DOPE sticker(s).
 
     fill_sheet=False: single sticker at (label_row, label_col).
     fill_sheet=True:  same sticker in every position on the sheet.
+    wind_label:       optional condition text drawn at top of each sticker.
     """
     buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
-    r = LABEL_DIAM / 2.0
+    c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
+    r   = LABEL_DIAM / 2.0
 
     if fill_sheet:
         for row in range(1, ROWS + 1):
             for col in range(1, COLS + 1):
                 cx, cy = _label_center(row, col, offset_x_in, offset_y_in)
-                _draw_sticker_content(c, cx, cy, r, dope_data)
+                _draw_sticker_content(c, cx, cy, r, dope_data, wind_label)
     else:
         cx, cy = _label_center(label_row, label_col, offset_x_in, offset_y_in)
-        _draw_sticker_content(c, cx, cy, r, dope_data)
+        _draw_sticker_content(c, cx, cy, r, dope_data, wind_label)
 
     c.save()
     return buf.getvalue()
 
+
+def generate_dope_pdf_multi(
+    stickers: list[dict],
+    start_row: int,
+    start_col: int,
+    session_name: str = "",
+    offset_x_in: float = 0.0,
+    offset_y_in: float = 0.0,
+) -> bytes:
+    """
+    Generate a multi-page PDF with one sticker per wind condition.
+    Stickers are placed starting at (start_row, start_col), filling
+    columns then rows, adding a new page when the sheet is full.
+
+    Each sticker dict: {"dope_data": [(dist, adj, wind), ...], "wind_label": str}
+    """
+    buf  = io.BytesIO()
+    c    = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
+    r    = LABEL_DIAM / 2.0
+    row  = start_row
+    col  = start_col
+
+    for sticker in stickers:
+        cx, cy = _label_center(row, col, offset_x_in, offset_y_in)
+        _draw_sticker_content(
+            c, cx, cy, r,
+            sticker.get("dope_data", []),
+            sticker.get("wind_label", ""),
+        )
+        col += 1
+        if col > COLS:
+            col = 1
+            row += 1
+            if row > ROWS:
+                row = 1
+                c.showPage()
+
+    c.save()
+    return buf.getvalue()
+
+
+# ── Formatting helpers ────────────────────────────────────────────────────────
 
 def _fmt_adj(val: float) -> str:
     if val == 0.0:
@@ -103,11 +144,17 @@ def _fmt_adj(val: float) -> str:
     return f"{val:+.1f}"
 
 
-def _adj_color(val: float) -> object:
-    if val > 0:
-        return GREEN
-    if val < 0:
-        return RED
+def _fmt_wind(val: float) -> str:
+    """Windage string: '>0.5' (dial right) or '<0.5' (dial left)."""
+    if abs(val) < 0.05:
+        return ""
+    arrow = ">" if val > 0 else "<"
+    return f"{arrow}{abs(val):.1f}"
+
+
+def _adj_color(val: float):
+    if val > 0:  return GREEN
+    if val < 0:  return RED
     return BLACK
 
 
@@ -116,70 +163,76 @@ def _entry_str(dist: float, adj: float) -> tuple[str, str]:
     return dist_str, _fmt_adj(adj)
 
 
-def _row_width(c: canvas.Canvas, left: tuple, right: tuple | None, size: float, gap: float) -> float:
-    """Total width needed for the widest half-row at the given font size."""
+# ── Font-fit helpers ──────────────────────────────────────────────────────────
+
+def _row_width(c, left, right, size, gap):
     def half_w(entry):
-        dist_str, adj_str = _entry_str(*entry)
-        return (
-            c.stringWidth(adj_str, _NARROW_BOLD, size)
-            + gap
-            + c.stringWidth(dist_str, _NARROW_BOLD, size)
-        )
+        dist_str, adj_str = _entry_str(entry[0], entry[1])
+        return (c.stringWidth(adj_str, _NARROW_BOLD, size)
+                + gap
+                + c.stringWidth(dist_str, _NARROW_BOLD, size))
     w = half_w(left)
     if right is not None:
         w = max(w, half_w(right))
     return w
 
 
-def _fit_font_size(
-    c: canvas.Canvas,
-    pairs: list,
-    half_w_avail: float,
-    row_h: float,
-) -> float:
-    """Return the largest font size where every row fits within half_w_avail."""
-    gap = 0.04 * inch
-    max_size = min(row_h * 0.72, 11.0)
+def _fit_font_size(c, pairs, half_w_avail, row_h, has_wind=False):
+    gap     = 0.04 * inch
+    size_cap = 9.5 if has_wind else 11.0
+    max_size = min(row_h * 0.72, size_cap)
     size = max_size
     while size >= 5.0:
-        fits = all(
-            _row_width(c, left, right, size, gap) <= half_w_avail
-            for left, right in pairs
-        )
-        if fits:
+        if all(_row_width(c, left, right, size, gap) <= half_w_avail
+               for left, right in pairs):
             return size
         size -= 0.25
     return 5.0
 
 
-def _draw_sticker_content(
-    c: canvas.Canvas,
-    cx: float,
-    cy: float,
-    r: float,
-    dope_data: list[tuple[float, float]],
-) -> None:
-    """Draw the two-column DOPE table centered inside the circle."""
-    pairs: list[tuple[tuple, tuple | None]] = []
-    for i in range(0, min(len(dope_data), 10), 2):
-        left = dope_data[i]
-        right = dope_data[i + 1] if i + 1 < len(dope_data) else None
-        pairs.append((left, right))
+# ── Sticker drawing ───────────────────────────────────────────────────────────
 
-    n_rows = len(pairs)
-    if n_rows == 0:
+def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label=""):
+    entries = [_parse_entry(e) for e in dope_data[:10]]
+    if not entries:
         return
 
-    usable_h = r * 1.72
-    row_h = usable_h / n_rows
+    has_wind = any(abs(e[2]) >= 0.05 for e in entries)
+
+    # Tighter margins: use more of the circle's vertical space
+    usable_h    = r * 1.82
+    label_gap   = 0.0
+    if wind_label:
+        label_size = min(6.0, r * 0.16)
+        label_gap  = label_size * 1.6        # reserve space at top for label
+        usable_h  -= label_gap
+
+    # Build pairs list (using first two values only for width calculation)
+    pairs = []
+    for i in range(0, len(entries), 2):
+        left  = entries[i]
+        right = entries[i + 1] if i + 1 < len(entries) else None
+        pairs.append((left, right))
+
+    n_rows       = len(pairs)
+    row_h        = usable_h / n_rows
     half_w_avail = r * 0.88
 
-    font_size = _fit_font_size(c, pairs, half_w_avail, row_h)
-    gap = 0.04 * inch
+    font_size = _fit_font_size(c, pairs, half_w_avail, row_h, has_wind)
+    gap       = 0.04 * inch
+    wind_size = max(font_size * 0.70, 5.0)
 
-    # Center the table block vertically in the circle
-    table_h = n_rows * row_h
-    top_y = cy + table_h / 2.0
+    # Row-height accounting: each row must fit main line + wind sub-line when present
+    # Shift table block down by label_gap so it doesn't overlap the wind label
+    table_h  = n_rows * row_h
+    top_y    = cy + table_h / 2.0 - label_gap / 2.0
+
+    # Wind label at top of circle (above table)
+    if wind_label:
+        c.setFont(_NARROW_REG, label_size)
+        c.setFillColor(GRAY)
+        lw = c.stringWidth(wind_label, _NARROW_REG, label_size)
+        c.drawString(cx - lw / 2, top_y + label_gap * 0.35, wind_label)
 
     # Center divider
     c.setStrokeColor(BLACK)
@@ -189,60 +242,66 @@ def _draw_sticker_content(
     # Row separators
     for i in range(1, n_rows):
         sep_y = top_y - i * row_h
-        c.line(cx - r * 0.88, sep_y, cx + r * 0.88, sep_y)
+        c.line(cx - half_w_avail, sep_y, cx + half_w_avail, sep_y)
 
     # Draw rows
     for i, (left_entry, right_entry) in enumerate(pairs):
         row_top = top_y - i * row_h
-        text_y = row_top - row_h / 2.0 - font_size * 0.32
+        # When wind sub-line present, shift main text slightly up within the row
+        if has_wind:
+            text_y = row_top - row_h * 0.38
+        else:
+            text_y = row_top - row_h / 2.0 - font_size * 0.32
 
-        _draw_half_left(c, cx, text_y, font_size, gap, left_entry)
+        _draw_half_left(c, cx, text_y, font_size, gap, left_entry, wind_size, has_wind)
         if right_entry is not None:
-            _draw_half_right(c, cx, text_y, font_size, gap, right_entry)
+            _draw_half_right(c, cx, text_y, font_size, gap, right_entry, wind_size, has_wind)
 
 
-def _draw_half_left(
-    c: canvas.Canvas,
-    cx: float, y: float,
-    size: float, gap: float,
-    entry: tuple[float, float],
-) -> None:
+def _draw_half_left(c, cx, y, size, gap, entry, wind_size, has_wind):
     """Left half: [adj] [dist] — distance flush to center, adj on outer edge."""
-    dist_str, adj_str = _entry_str(*entry)
-    dist, adj = entry
+    dist, adj, wind = entry
+    dist_str, adj_str = _entry_str(dist, adj)
 
     dist_w = c.stringWidth(dist_str, _NARROW_BOLD, size)
     adj_w  = c.stringWidth(adj_str,  _NARROW_BOLD, size)
-
     dist_x = cx - gap - dist_w
     adj_x  = dist_x - gap - adj_w
 
     c.setFont(_NARROW_BOLD, size)
     c.setFillColor(BLUE)
     c.drawString(dist_x, y, dist_str)
-
     c.setFillColor(_adj_color(adj))
     c.drawString(adj_x, y, adj_str)
 
+    if has_wind:
+        wind_str = _fmt_wind(wind)
+        if wind_str:
+            wind_y = y - size * 0.88
+            c.setFont(_NARROW_BOLD, wind_size)
+            c.setFillColor(AMBER)
+            c.drawString(adj_x, wind_y, wind_str)
 
-def _draw_half_right(
-    c: canvas.Canvas,
-    cx: float, y: float,
-    size: float, gap: float,
-    entry: tuple[float, float],
-) -> None:
+
+def _draw_half_right(c, cx, y, size, gap, entry, wind_size, has_wind):
     """Right half: [dist] [adj] — distance flush to center, adj on outer edge."""
-    dist_str, adj_str = _entry_str(*entry)
-    dist, adj = entry
+    dist, adj, wind = entry
+    dist_str, adj_str = _entry_str(dist, adj)
 
     dist_w = c.stringWidth(dist_str, _NARROW_BOLD, size)
-
     dist_x = cx + gap
     adj_x  = dist_x + dist_w + gap
 
     c.setFont(_NARROW_BOLD, size)
     c.setFillColor(BLUE)
     c.drawString(dist_x, y, dist_str)
-
     c.setFillColor(_adj_color(adj))
     c.drawString(adj_x, y, adj_str)
+
+    if has_wind:
+        wind_str = _fmt_wind(wind)
+        if wind_str:
+            wind_y = y - size * 0.88
+            c.setFont(_NARROW_BOLD, wind_size)
+            c.setFillColor(AMBER)
+            c.drawString(adj_x, wind_y, wind_str)

@@ -7,12 +7,19 @@ from flask_limiter import RateLimitExceeded
 
 from .factory import limiter
 from .ballistics import interpolate_dope
-from .pdf_generator import generate_dope_pdf
+from .pdf_generator import generate_dope_pdf, generate_dope_pdf_multi
 from . import database as db
 
 bp = Blueprint("main", __name__)
 
 ADMIN_KEY = os.environ.get("DOPE_ADMIN_KEY", "")
+
+_WIND_TO_FPS = {
+    "mph":  1.46667,
+    "fps":  1.0,
+    "km/h": 0.91134,
+    "m/s":  3.28084,
+}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -60,12 +67,18 @@ def calculate():
     dope_entries   = data.get("dope_entries", [])
     out_distances  = [float(d) for d in data.get("output_distances", [])]
 
+    # Wind parameters
+    wind_speed     = float(data.get("wind_speed", 0.0))
+    wind_unit      = data.get("wind_unit", "mph")
+    wind_angle_deg = float(data.get("wind_angle_deg", 0.0))
+    wind_fps       = wind_speed * _WIND_TO_FPS.get(wind_unit, 1.46667)
+
     if not out_distances:
         return jsonify({"error": "No output distances specified"}), 400
 
     results = {}
     for dist in out_distances:
-        mil = interpolate_dope(
+        val = interpolate_dope(
             dope_entries=dope_entries,
             target_distance=dist,
             muzzle_velocity_fps=velocity_fps,
@@ -75,8 +88,10 @@ def calculate():
             temp_f=temp_f,
             bc_model=bc_model,
             sight_height_in=sight_h,
+            wind_speed_fps=wind_fps,
+            wind_angle_deg=wind_angle_deg,
         )
-        results[str(int(dist))] = mil
+        results[str(int(dist))] = {"elevation": val["elevation"], "windage": val["windage"]}
 
     return jsonify({"results": results})
 
@@ -87,7 +102,6 @@ def calculate():
 def generate_pdf():
     data = request.get_json(force=True)
 
-    dope_data    = [(float(d["distance"]), float(d["adjustment"])) for d in data.get("dope_data", [])]
     label_row    = int(data.get("label_row", 1))
     label_col    = int(data.get("label_col", 1))
     session_name = data.get("session_name", "")
@@ -99,13 +113,36 @@ def generate_pdf():
         return jsonify({"error": "label_row must be 1–5"}), 400
     if not (1 <= label_col <= 4):
         return jsonify({"error": "label_col must be 1–4"}), 400
-    if len(dope_data) > 10:
-        return jsonify({"error": "Maximum 10 DOPE entries"}), 400
 
-    pdf_bytes = generate_dope_pdf(
-        dope_data, label_row, label_col, session_name, offset_x, offset_y,
-        fill_sheet=fill_sheet,
-    )
+    stickers_raw = data.get("stickers")
+
+    if stickers_raw is not None:
+        # Multi-sticker batch path
+        if len(stickers_raw) > 100:
+            return jsonify({"error": "Maximum 100 stickers per batch"}), 400
+        stickers = []
+        for s in stickers_raw:
+            dope = [
+                (float(e["distance"]), float(e["adjustment"]), float(e.get("windage", 0.0)))
+                for e in s.get("dope_data", [])
+            ]
+            stickers.append({"dope_data": dope, "wind_label": s.get("wind_label", "")})
+        pdf_bytes = generate_dope_pdf_multi(
+            stickers, label_row, label_col, session_name, offset_x, offset_y,
+        )
+    else:
+        # Single-sticker path (legacy + wind_label support)
+        dope_data  = [
+            (float(d["distance"]), float(d["adjustment"]), float(d.get("windage", 0.0)))
+            for d in data.get("dope_data", [])
+        ]
+        wind_label = data.get("wind_label", "")
+        if len(dope_data) > 10:
+            return jsonify({"error": "Maximum 10 DOPE entries"}), 400
+        pdf_bytes = generate_dope_pdf(
+            dope_data, label_row, label_col, session_name, offset_x, offset_y,
+            fill_sheet=fill_sheet, wind_label=wind_label,
+        )
 
     filename = (session_name.replace(" ", "_") + ".pdf") if session_name else "dope-sticker.pdf"
     return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf",
@@ -137,11 +174,11 @@ def add_ammo():
         return jsonify({"error": f"Ammo '{entry['name']}' already exists for caliber '{entry['caliber']}'"}), 409
 
     db.add_ammo({
-        "caliber": entry["caliber"],
-        "name": entry["name"],
+        "caliber":      entry["caliber"],
+        "name":         entry["name"],
         "velocity_fps": float(entry["velocity_fps"]),
-        "bc_g1": float(entry["bc_g1"]),
-        "bc_g7": float(entry["bc_g7"]),
+        "bc_g1":        float(entry["bc_g1"]),
+        "bc_g7":        float(entry["bc_g7"]),
     })
     return jsonify({"added": entry["name"]})
 
@@ -155,7 +192,7 @@ def edit_ammo(name: str):
     if banned:
         return banned
 
-    updates = request.get_json(force=True)
+    updates     = request.get_json(force=True)
     new_name    = updates.get("name", name)
     new_caliber = updates.get("caliber", "")
 
