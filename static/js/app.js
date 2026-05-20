@@ -23,14 +23,21 @@ function adjLabel()   { return state.adjUnit  === 'moa' ? 'MOA' : 'mil'; }
 function clickValue() { return state.adjUnit  === 'moa' ? 0.25  : 0.1; }
 function adjDecimals(){ return state.adjUnit  === 'moa' ? 2     : 1; }
 
+function roundToClick(v) {
+    const cv = clickValue();
+    return Math.round(v / cv) * cv;
+}
+
 function fmtAdj(v) {
-    if (v === 0) return '0.' + '0'.repeat(adjDecimals());
-    return (v > 0 ? '+' : '') + v.toFixed(adjDecimals());
+    const r = roundToClick(v);
+    if (r === 0) return '0.' + '0'.repeat(adjDecimals());
+    return (r > 0 ? '+' : '') + r.toFixed(adjDecimals());
 }
 
 function adjClass(v) {
-    if (v > 0) return 'adj-pos';
-    if (v < 0) return 'adj-neg';
+    const r = roundToClick(v);
+    if (r > 0) return 'adj-pos';
+    if (r < 0) return 'adj-neg';
     return 'adj-zero';
 }
 
@@ -387,7 +394,7 @@ function renderResultsTable() {
     Object.entries(state.calculatedResults)
         .sort(([a], [b]) => Number(a) - Number(b))
         .forEach(([dist, adj]) => {
-            const clicks = Math.round(adj / cv);
+            const clicks = Math.round(roundToClick(adj) / cv);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="dist-blue">${dist}</td>
