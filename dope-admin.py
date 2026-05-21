@@ -11,11 +11,16 @@ Usage:
   dope-admin bans remove <ip>
   dope-admin deleted list
   dope-admin deleted restore <name>
+  dope-admin visits [--top N] [--log-dir DIR] [--host-id ID]
 """
 
 import argparse
+import gzip
 import os
+import re
 import sys
+from collections import Counter
+from pathlib import Path
 
 import requests
 
@@ -74,6 +79,14 @@ def _print_table(rows: list[dict], columns: list[tuple[str, str]]) -> None:
         print(fmt.format(*[str(row.get(k, "")) for _, k in columns]))
 
 
+NPM_LOG_DIR = os.environ.get(
+    "NPM_LOG_DIR", "/opt/containers/nginx-proxy-manager/data/logs"
+)
+NPM_HOST_ID = os.environ.get("NPM_HOST_ID", "19")
+
+_CLIENT_RE = re.compile(r'\[Client ([^\]]+)\]')
+
+
 # -- Subcommand handlers -------------------------------------------------------
 
 def cmd_bans_list(_args):
@@ -109,6 +122,50 @@ def cmd_deleted_restore(args):
     quoted = requests.utils.quote(args.name, safe="")
     data = _post(f"/api/admin/restore/{quoted}")
     print(f"Restored: {data['restored']}")
+
+
+def cmd_visits(args):
+    log_dir = Path(args.log_dir)
+    if not log_dir.is_dir():
+        print(f"ERROR: log directory not found: {log_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    pattern = f"proxy-host-{args.host_id}_access.log*"
+    files = sorted(log_dir.glob(pattern))
+    if not files:
+        print(f"ERROR: no log files matching {pattern} in {log_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    counts: Counter = Counter()
+    for f in files:
+        opener = gzip.open if f.suffix == ".gz" else open
+        try:
+            with opener(f, "rt", errors="replace") as fh:
+                for line in fh:
+                    m = _CLIENT_RE.search(line)
+                    if m:
+                        counts[m.group(1)] += 1
+        except OSError as exc:
+            print(f"  warning: could not read {f.name}: {exc}", file=sys.stderr)
+
+    if not counts:
+        print("No visit data found.")
+        return
+
+    top = counts.most_common(args.top if args.top else None)
+    total = sum(counts.values())
+
+    ip_w = max(len("IP Address"), max(len(ip) for ip, _ in top))
+    fmt = f"  {{:<{ip_w}}}  {{:>8}}"
+    sep = "  " + "-" * ip_w + "  " + "-" * 8
+
+    print(fmt.format("IP Address", "Visits"))
+    print(sep)
+    for ip, n in top:
+        print(fmt.format(ip, n))
+    print(sep)
+    print(fmt.format("TOTAL", total))
+    print(fmt.format("Unique IPs", len(counts)))
 
 
 # -- Argument parser -----------------------------------------------------------
@@ -147,6 +204,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_restore = deleted_sub.add_parser("restore", help="Restore a deleted ammo entry")
     p_restore.add_argument("name", help="Exact ammo name to restore")
     p_restore.set_defaults(func=cmd_deleted_restore)
+
+    # visits
+    p_visits = sub.add_parser("visits", help="Report unique visitor IPs from NPM logs")
+    p_visits.add_argument("--top", type=int, default=0, metavar="N",
+                          help="Show only top N IPs (default: all)")
+    p_visits.add_argument("--log-dir", default=NPM_LOG_DIR, metavar="DIR",
+                          help=f"NPM log directory (default: {NPM_LOG_DIR})")
+    p_visits.add_argument("--host-id", default=NPM_HOST_ID, metavar="ID",
+                          help=f"NPM proxy host ID (default: {NPM_HOST_ID})")
+    p_visits.set_defaults(func=cmd_visits)
 
     return p
 
