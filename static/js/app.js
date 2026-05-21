@@ -345,7 +345,7 @@ function windDesc(deg) {
 function setCompassAngle(deg) {
     deg = Math.round(((deg % 360) + 360) % 360);
     $('wind-angle').value = deg;
-    $('compass-arrow').setAttribute('transform', `rotate(${-deg})`);
+    $('compass-arrow').setAttribute('transform', `rotate(${deg})`);
     $('compass-angle-text').textContent = `${deg}°`;
     $('compass-desc-text').textContent  = windDesc(deg);
 }

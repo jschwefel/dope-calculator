@@ -127,13 +127,15 @@ def _trajectory_mils(
 ) -> float:
     """
     Elevation adjustment in MIL. Geometrically accounts for barrel-to-scope offset.
-    Returns exactly 0.0 at the zero distance.
+    drop_d and drop_z are in feet (from _integrate). sight_height_in is in inches.
+    Returns exactly 0.0 at the zero distance. Positive = dial up.
     """
     if dist_yards <= 0:
         return 0.0
-    h     = sight_height_in
-    delta = drop_d - (drop_z - h) * (dist_yards / zero_yards) - h
-    return -delta / (dist_yards * 36.0 / 1000.0)
+    h_ft  = sight_height_in / 12.0
+    scale = dist_yards / zero_yards
+    needed_ft = drop_d + h_ft - scale * (drop_z + h_ft)
+    return (needed_ft * 12.0) / (dist_yards * 36.0 / 1000.0)
 
 
 def _windage_mils(
@@ -184,8 +186,8 @@ def calculate_trajectory(
             results[dist] = {"elevation": 0.0, "windage": 0.0}
             continue
         drop_d, tof = _integrate(muzzle_velocity_fps, bc_eff, cd_fn, dist, hw)
-        elev = round(_trajectory_mils(drop_d, drop_z, dist, zero_distance_yards, sight_height_in), 1)
-        wind = round(_windage_mils(cw, tof, dist, muzzle_velocity_fps), 1)
+        elev = _trajectory_mils(drop_d, drop_z, dist, zero_distance_yards, sight_height_in)
+        wind = _windage_mils(cw, tof, dist, muzzle_velocity_fps)
         results[dist] = {"elevation": elev, "windage": wind}
     return results
 
