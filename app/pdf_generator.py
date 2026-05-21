@@ -71,6 +71,7 @@ def generate_dope_pdf(
     offset_y_in: float = 0.0,
     fill_sheet: bool = False,
     wind_label: str = "",
+    adj_decimals: int = 1,
 ) -> bytes:
     """
     Generate a PDF with DOPE sticker(s).
@@ -78,6 +79,7 @@ def generate_dope_pdf(
     fill_sheet=False: single sticker at (label_row, label_col).
     fill_sheet=True:  same sticker in every position on the sheet.
     wind_label:       optional condition text drawn at top of each sticker.
+    adj_decimals:     decimal places for adjustments (1 for MRAD, 2 for MOA).
     """
     buf = io.BytesIO()
     c   = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
@@ -87,10 +89,10 @@ def generate_dope_pdf(
         for row in range(1, ROWS + 1):
             for col in range(1, COLS + 1):
                 cx, cy = _label_center(row, col, offset_x_in, offset_y_in)
-                _draw_sticker_content(c, cx, cy, r, dope_data, wind_label)
+                _draw_sticker_content(c, cx, cy, r, dope_data, wind_label, adj_decimals)
     else:
         cx, cy = _label_center(label_row, label_col, offset_x_in, offset_y_in)
-        _draw_sticker_content(c, cx, cy, r, dope_data, wind_label)
+        _draw_sticker_content(c, cx, cy, r, dope_data, wind_label, adj_decimals)
 
     c.save()
     return buf.getvalue()
@@ -103,6 +105,7 @@ def generate_dope_pdf_multi(
     session_name: str = "",
     offset_x_in: float = 0.0,
     offset_y_in: float = 0.0,
+    adj_decimals: int = 1,
 ) -> bytes:
     """
     Generate a multi-page PDF with one sticker per wind condition.
@@ -110,6 +113,7 @@ def generate_dope_pdf_multi(
     columns then rows, adding a new page when the sheet is full.
 
     Each sticker dict: {"dope_data": [(dist, adj, wind), ...], "wind_label": str}
+    adj_decimals: decimal places for adjustments (1 for MRAD, 2 for MOA).
     """
     buf  = io.BytesIO()
     c    = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
@@ -123,6 +127,7 @@ def generate_dope_pdf_multi(
             c, cx, cy, r,
             sticker.get("dope_data", []),
             sticker.get("wind_label", ""),
+            adj_decimals,
         )
         col += 1
         if col > COLS:
@@ -138,18 +143,18 @@ def generate_dope_pdf_multi(
 
 # ── Formatting helpers ────────────────────────────────────────────────────────
 
-def _fmt_adj(val: float) -> str:
+def _fmt_adj(val: float, decimals: int = 1) -> str:
     if val == 0.0:
-        return "0.0"
-    return f"{val:+.1f}"
+        return f"0.{'0' * decimals}"
+    return f"{val:+.{decimals}f}"
 
 
-def _fmt_wind(val: float) -> str:
+def _fmt_wind(val: float, decimals: int = 1) -> str:
     """Windage string: '>0.5' (dial right) or '<0.5' (dial left)."""
     if abs(val) < 0.05:
         return ""
     arrow = ">" if val > 0 else "<"
-    return f"{arrow}{abs(val):.1f}"
+    return f"{arrow}{abs(val):.{decimals}f}"
 
 
 def _adj_color(val: float):
@@ -158,16 +163,16 @@ def _adj_color(val: float):
     return BLACK
 
 
-def _entry_str(dist: float, adj: float) -> tuple[str, str]:
+def _entry_str(dist: float, adj: float, decimals: int = 1) -> tuple[str, str]:
     dist_str = str(int(dist)) if dist == int(dist) else f"{dist:.0f}"
-    return dist_str, _fmt_adj(adj)
+    return dist_str, _fmt_adj(adj, decimals)
 
 
 # ── Font-fit helpers ──────────────────────────────────────────────────────────
 
-def _row_width(c, left, right, size, gap):
+def _row_width(c, left, right, size, gap, decimals: int = 1):
     def half_w(entry):
-        dist_str, adj_str = _entry_str(entry[0], entry[1])
+        dist_str, adj_str = _entry_str(entry[0], entry[1], decimals)
         return (c.stringWidth(adj_str, _NARROW_BOLD, size)
                 + gap
                 + c.stringWidth(dist_str, _NARROW_BOLD, size))
@@ -177,13 +182,13 @@ def _row_width(c, left, right, size, gap):
     return w
 
 
-def _fit_font_size(c, pairs, half_w_avail, row_h, has_wind=False):
+def _fit_font_size(c, pairs, half_w_avail, row_h, has_wind=False, decimals: int = 1):
     gap     = 0.04 * inch
     size_cap = 9.5 if has_wind else 11.0
     max_size = min(row_h * 0.72, size_cap)
     size = max_size
     while size >= 5.0:
-        if all(_row_width(c, left, right, size, gap) <= half_w_avail
+        if all(_row_width(c, left, right, size, gap, decimals) <= half_w_avail
                for left, right in pairs):
             return size
         size -= 0.25
@@ -192,7 +197,7 @@ def _fit_font_size(c, pairs, half_w_avail, row_h, has_wind=False):
 
 # ── Sticker drawing ───────────────────────────────────────────────────────────
 
-def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label=""):
+def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label="", adj_decimals: int = 1):
     entries = [_parse_entry(e) for e in dope_data[:10]]
     if not entries:
         return
@@ -218,7 +223,7 @@ def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label=""):
     row_h        = usable_h / n_rows
     half_w_avail = r * 0.88
 
-    font_size = _fit_font_size(c, pairs, half_w_avail, row_h, has_wind)
+    font_size = _fit_font_size(c, pairs, half_w_avail, row_h, has_wind, adj_decimals)
     gap       = 0.04 * inch
     wind_size = max(font_size * 0.70, 5.0)
 
@@ -253,15 +258,15 @@ def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label=""):
         else:
             text_y = row_top - row_h / 2.0 - font_size * 0.32
 
-        _draw_half_left(c, cx, text_y, font_size, gap, left_entry, wind_size, has_wind)
+        _draw_half_left(c, cx, text_y, font_size, gap, left_entry, wind_size, has_wind, adj_decimals)
         if right_entry is not None:
-            _draw_half_right(c, cx, text_y, font_size, gap, right_entry, wind_size, has_wind)
+            _draw_half_right(c, cx, text_y, font_size, gap, right_entry, wind_size, has_wind, adj_decimals)
 
 
-def _draw_half_left(c, cx, y, size, gap, entry, wind_size, has_wind):
+def _draw_half_left(c, cx, y, size, gap, entry, wind_size, has_wind, adj_decimals: int = 1):
     """Left half: [adj] [dist] — distance flush to center, adj on outer edge."""
     dist, adj, wind = entry
-    dist_str, adj_str = _entry_str(dist, adj)
+    dist_str, adj_str = _entry_str(dist, adj, adj_decimals)
 
     dist_w = c.stringWidth(dist_str, _NARROW_BOLD, size)
     adj_w  = c.stringWidth(adj_str,  _NARROW_BOLD, size)
@@ -275,7 +280,7 @@ def _draw_half_left(c, cx, y, size, gap, entry, wind_size, has_wind):
     c.drawString(adj_x, y, adj_str)
 
     if has_wind:
-        wind_str = _fmt_wind(wind)
+        wind_str = _fmt_wind(wind, adj_decimals)
         if wind_str:
             wind_y = y - size * 0.88
             c.setFont(_NARROW_BOLD, wind_size)
@@ -283,10 +288,10 @@ def _draw_half_left(c, cx, y, size, gap, entry, wind_size, has_wind):
             c.drawString(adj_x, wind_y, wind_str)
 
 
-def _draw_half_right(c, cx, y, size, gap, entry, wind_size, has_wind):
+def _draw_half_right(c, cx, y, size, gap, entry, wind_size, has_wind, adj_decimals: int = 1):
     """Right half: [dist] [adj] — distance flush to center, adj on outer edge."""
     dist, adj, wind = entry
-    dist_str, adj_str = _entry_str(dist, adj)
+    dist_str, adj_str = _entry_str(dist, adj, adj_decimals)
 
     dist_w = c.stringWidth(dist_str, _NARROW_BOLD, size)
     dist_x = cx + gap
@@ -299,7 +304,7 @@ def _draw_half_right(c, cx, y, size, gap, entry, wind_size, has_wind):
     c.drawString(adj_x, y, adj_str)
 
     if has_wind:
-        wind_str = _fmt_wind(wind)
+        wind_str = _fmt_wind(wind, adj_decimals)
         if wind_str:
             wind_y = y - size * 0.88
             c.setFont(_NARROW_BOLD, wind_size)

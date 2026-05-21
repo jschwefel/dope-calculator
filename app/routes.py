@@ -108,6 +108,7 @@ def generate_pdf():
     offset_x     = float(data.get("offset_x_in", 0.0))
     offset_y     = float(data.get("offset_y_in", 0.0))
     fill_sheet   = bool(data.get("fill_sheet", False))
+    adj_decimals = int(data.get("adj_decimals", 1))
 
     if not (1 <= label_row <= 5):
         return jsonify({"error": "label_row must be 1–5"}), 400
@@ -128,7 +129,7 @@ def generate_pdf():
             ]
             stickers.append({"dope_data": dope, "wind_label": s.get("wind_label", "")})
         pdf_bytes = generate_dope_pdf_multi(
-            stickers, label_row, label_col, session_name, offset_x, offset_y,
+            stickers, label_row, label_col, session_name, offset_x, offset_y, adj_decimals,
         )
     else:
         # Single-sticker path (legacy + wind_label support)
@@ -141,7 +142,7 @@ def generate_pdf():
             return jsonify({"error": "Maximum 10 DOPE entries"}), 400
         pdf_bytes = generate_dope_pdf(
             dope_data, label_row, label_col, session_name, offset_x, offset_y,
-            fill_sheet=fill_sheet, wind_label=wind_label,
+            fill_sheet=fill_sheet, wind_label=wind_label, adj_decimals=adj_decimals,
         )
 
     filename = (session_name.replace(" ", "_") + ".pdf") if session_name else "dope-sticker.pdf"

@@ -491,6 +491,8 @@ function renderResultsTable() {
                 const wClass = Math.abs(wind) >= 0.05 ? 'adj-amber' : 'adj-zero';
                 windCell = `<td class="${wClass}">${arrow} ${fmtAdj(wind)}</td>`;
             }
+            const elevR = roundToClick(elev);
+            const windR = roundToClick(wind);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="dist-blue">${dist}</td>
@@ -498,7 +500,7 @@ function renderResultsTable() {
                 <td class="${adjClass(elev)}">${clicks > 0 ? '+' : ''}${clicks}</td>
                 ${windCell}
                 <td><input type="checkbox" class="sticker-check"
-                    data-dist="${dist}" data-adj="${elev}" data-wind="${wind}" checked></td>
+                    data-dist="${dist}" data-adj="${elevR}" data-wind="${windR}" checked></td>
             `;
             tbody.appendChild(tr);
         });
@@ -506,6 +508,12 @@ function renderResultsTable() {
     document.querySelectorAll('.sticker-check').forEach(cb => {
         cb.addEventListener('change', updateStickerPreview);
     });
+}
+
+function fmtWindStr(v) {
+    const rv = roundToClick(v);
+    if (Math.abs(rv) < 0.05) return '';
+    return (rv > 0 ? '>' : '<') + Math.abs(rv).toFixed(adjDecimals());
 }
 
 // ── Sticker preview ───────────────────────────────────────────────────────────
@@ -538,12 +546,8 @@ function updateStickerPreview() {
     pairs.forEach(([left, right]) => {
         const lc = left.adj > 0 ? 'p-green' : left.adj < 0 ? 'p-red' : 'p-gray';
         const rc = right ? (right.adj > 0 ? 'p-green' : right.adj < 0 ? 'p-red' : 'p-gray') : '';
-        const lwStr = hasWind && Math.abs(left.wind) >= 0.05
-            ? (left.wind > 0 ? `>${Math.abs(left.wind).toFixed(1)}` : `<${Math.abs(left.wind).toFixed(1)}`)
-            : '';
-        const rwStr = right && hasWind && Math.abs(right.wind) >= 0.05
-            ? (right.wind > 0 ? `>${Math.abs(right.wind).toFixed(1)}` : `<${Math.abs(right.wind).toFixed(1)}`)
-            : '';
+        const lwStr = hasWind ? fmtWindStr(left.wind) : '';
+        const rwStr = hasWind && right ? fmtWindStr(right.wind) : '';
 
         rows += `<div class="preview-row">
             <div class="preview-half preview-left${hvCls}">
@@ -636,6 +640,7 @@ $('btn-generate-pdf').addEventListener('click', async () => {
         offset_x_in:  parseFloat($('offset-x').value) || 0,
         offset_y_in:  parseFloat($('offset-y').value) || 0,
         fill_sheet:   $('fill-sheet').checked,
+        adj_decimals: adjDecimals(),
     };
 
     const res = await fetch('/api/generate-pdf', {
@@ -711,6 +716,7 @@ $('btn-generate-batch-pdf').addEventListener('click', async () => {
         session_name: sessionName,
         offset_x_in:  parseFloat($('offset-x').value) || 0,
         offset_y_in:  parseFloat($('offset-y').value) || 0,
+        adj_decimals: adjDecimals(),
     };
 
     const res = await fetch('/api/generate-pdf', {
