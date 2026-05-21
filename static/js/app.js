@@ -74,6 +74,13 @@ function applyUnits() {
         const d = el.dataset.rawDist;
         if (d !== undefined) el.textContent = `${d} ${dl}`;
     });
+
+    const adjExample   = state.adjUnit === 'moa' ? '8.75' : '2.9';
+    const adjStep      = state.adjUnit === 'moa' ? '0.25' : '0.01';
+    document.querySelectorAll('.dope-adj').forEach(el => {
+        el.placeholder = `e.g. ${adjExample}`;
+        el.step        = adjStep;
+    });
 }
 
 // ── Unit selectors ─────────────────────────────────────────────────────────────
@@ -262,11 +269,13 @@ $('dope-entries').addEventListener('click', e => {
 });
 
 function buildDopeRow(dist = '', adj = '') {
+    const adjExample = state.adjUnit === 'moa' ? '8.75' : '2.9';
+    const adjStep    = state.adjUnit === 'moa' ? '0.25' : '0.01';
     const div = document.createElement('div');
     div.className = 'dope-row';
     div.innerHTML = `
         <div class="field"><input type="number" class="dope-dist" placeholder="e.g. 100" min="1" step="1" value="${dist}"></div>
-        <div class="field"><input type="number" class="dope-adj" placeholder="e.g. 2.9" step="0.01" value="${adj}"></div>
+        <div class="field"><input type="number" class="dope-adj" placeholder="e.g. ${adjExample}" step="${adjStep}" value="${adj}"></div>
         <button class="btn-remove-dope btn-danger btn-sm">✕</button>
     `;
     return div;
