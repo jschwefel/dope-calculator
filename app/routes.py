@@ -2,7 +2,8 @@
 
 import io
 import os
-from flask import Blueprint, jsonify, render_template, request, send_file
+from pathlib import Path
+from flask import Blueprint, jsonify, render_template, request, send_file, send_from_directory
 from flask_limiter import RateLimitExceeded
 
 from .factory import limiter
@@ -279,3 +280,18 @@ def admin_restore(name: str):
     if not db.restore_ammo(name):
         return jsonify({"error": "Not found"}), 404
     return jsonify({"restored": name})
+
+
+# ── PWA ───────────────────────────────────────────────────────────────────────
+
+_PWA_DIR = str(Path(__file__).parent.parent / "pwa")
+
+
+@bp.route("/pwa/")
+def pwa_index():
+    return send_from_directory(_PWA_DIR, "index.html")
+
+
+@bp.route("/pwa/<path:filename>")
+def pwa_static(filename: str):
+    return send_from_directory(_PWA_DIR, filename)

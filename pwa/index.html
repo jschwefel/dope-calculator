@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOPE Calculator</title>
+    <meta name="theme-color" content="#1565C0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DOPE">
+    <link rel="manifest" href="/pwa/manifest.json">
+    <link rel="apple-touch-icon" href="/pwa/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/pwa/icons/icon-192.png">
+    <link rel="stylesheet" href="/pwa/css/pwa.css">
+</head>
+<body>
+<div class="container">
+
+    <!-- Install banner (hidden until beforeinstallprompt) -->
+    <div id="install-banner" class="install-banner hidden">
+        <span>Install DOPE Calculator for offline use</span>
+        <button id="btn-install" class="btn-primary btn-sm">Install</button>
+        <button id="btn-dismiss-install" class="btn-secondary btn-sm">Dismiss</button>
+    </div>
+
+    <!-- Top bar: online indicator -->
+    <div class="top-bar">
+        <div class="online-indicator">
+            <span id="online-dot" class="online-dot"></span>
+            <span id="online-text">Online</span>
+        </div>
+    </div>
+
+    <header>
+        <h1>DOPE Calculator</h1>
+        <p class="subtitle">Offline Ballistics &amp; Niimbot Sticker Printer</p>
+    </header>
+
+    <!-- Session -->
+    <section class="card" id="session-section">
+        <h2>Session</h2>
+        <div class="row">
+            <div class="field">
+                <label for="session-name">Session Name</label>
+                <input type="text" id="session-name" placeholder="e.g. Rifle 1 – Summer Match" maxlength="40">
+            </div>
+            <div class="field">
+                <label for="dist-unit">Distance Unit</label>
+                <select id="dist-unit">
+                    <option value="yd">Yards</option>
+                    <option value="m">Meters</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="adj-unit">Adjustment Unit</label>
+                <select id="adj-unit">
+                    <option value="mrad">MRAD (mil)</option>
+                    <option value="moa">MOA</option>
+                </select>
+            </div>
+            <div class="actions">
+                <button id="btn-save-session" class="btn-secondary">Save .dope</button>
+                <button id="btn-load-session" class="btn-secondary">Load .dope</button>
+                <input type="file" id="file-load-input" accept=".dope" class="hidden">
+            </div>
+        </div>
+    </section>
+
+    <!-- Ammunition -->
+    <section class="card" id="ammo-section">
+        <h2>Ammunition</h2>
+
+        <div id="ammo-empty-notice" class="ammo-empty-notice hidden">
+            No ammo loaded. Connect to the internet and tap <strong>Sync</strong> to download the ammo library.
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label for="caliber-select">Caliber</label>
+                <select id="caliber-select"></select>
+            </div>
+            <div class="field">
+                <label for="ammo-select">Load</label>
+                <select id="ammo-select"></select>
+            </div>
+            <div class="field">
+                <label for="bc-model">BC Model</label>
+                <select id="bc-model">
+                    <option value="g7">G7</option>
+                    <option value="g1">G1</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="velocity-fps">Muzzle Velocity (fps)</label>
+                <input type="number" id="velocity-fps" value="1070" min="800" max="5000" step="1">
+            </div>
+            <div class="field" id="field-bc-g7">
+                <label for="bc-g7">BC (G7)</label>
+                <input type="number" id="bc-g7" value="0.067" min="0.01" max="1.5" step="0.001">
+            </div>
+            <div class="field hidden" id="field-bc-g1">
+                <label for="bc-g1">BC (G1)</label>
+                <input type="number" id="bc-g1" value="0.131" min="0.01" max="1.5" step="0.001">
+            </div>
+        </div>
+        <div class="row ammo-db-controls">
+            <button id="btn-show-add-ammo" class="btn-secondary btn-sm">+ Add Local Ammo</button>
+            <button id="btn-sync-ammo" class="btn-secondary btn-sm">↻ Sync with Server</button>
+        </div>
+        <div id="add-ammo-form" class="hidden sub-form">
+            <h3>Add Ammunition (local only)</h3>
+            <div class="row">
+                <div class="field"><label>Caliber</label><input type="text" id="new-ammo-caliber" placeholder="e.g. 6.5 Creedmoor"></div>
+                <div class="field"><label>Name</label><input type="text" id="new-ammo-name" placeholder="Brand / load description"></div>
+                <div class="field"><label>Velocity (fps)</label><input type="number" id="new-ammo-vel" value="2700" step="1"></div>
+                <div class="field"><label>BC G1</label><input type="number" id="new-ammo-bcg1" value="0.500" step="0.001"></div>
+                <div class="field"><label>BC G7</label><input type="number" id="new-ammo-bcg7" value="0.250" step="0.001"></div>
+                <div class="actions"><button id="btn-add-ammo" class="btn-primary">Add</button></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Range DOPE Entries -->
+    <section class="card">
+        <h2>Range DOPE Entries <span class="hint">(observed, minimum 3)</span></h2>
+        <div class="row range-conditions-row">
+            <div class="field">
+                <label for="range-temp-f">Range Temperature (°F)</label>
+                <input type="number" id="range-temp-f" placeholder="e.g. 72" min="-30" max="120" step="1">
+            </div>
+            <div class="field">
+                <label for="range-altitude-ft">Range Elevation (ft)</label>
+                <input type="number" id="range-altitude-ft" placeholder="e.g. 850" min="-200" max="15000" step="50">
+            </div>
+            <p class="hint range-conditions-hint">Leave blank to use match-day conditions.</p>
+        </div>
+        <div class="dope-header">
+            <span id="dope-dist-header">Distance (yd)</span>
+            <span id="dope-adj-header">Adjustment (mil)</span>
+            <span></span>
+        </div>
+        <div id="dope-entries"></div>
+        <button id="btn-add-dope" class="btn-secondary btn-sm">+ Add Entry</button>
+    </section>
+
+    <!-- Wind Conditions -->
+    <section class="card">
+        <details id="wind-details">
+            <summary class="wind-summary">
+                <span class="wind-summary-title">Wind Conditions</span>
+                <span class="hint wind-summary-hint">(collapsed = calm)</span>
+            </summary>
+            <div class="wind-body">
+                <div class="wind-layout">
+                    <div class="compass-wrap">
+                        <svg id="wind-compass" viewBox="0 0 160 200" width="140" height="175"
+                             style="cursor:pointer;display:block" role="img" aria-label="Wind direction compass">
+                            <circle cx="80" cy="90" r="68" fill="#16213e" stroke="#2a2a4a" stroke-width="1.5"/>
+                            <line x1="80" y1="22" x2="80" y2="33" stroke="#444" stroke-width="1.5"/>
+                            <line x1="148" y1="90" x2="137" y2="90" stroke="#444" stroke-width="1.5"/>
+                            <line x1="80" y1="158" x2="80" y2="147" stroke="#444" stroke-width="1.5"/>
+                            <line x1="12" y1="90" x2="23" y2="90" stroke="#444" stroke-width="1.5"/>
+                            <text x="80" y="16" text-anchor="middle" font-size="9" font-weight="bold" fill="#64B5F6" font-family="system-ui,sans-serif">TARGET</text>
+                            <text x="80" y="25" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">0°</text>
+                            <text x="153" y="93" text-anchor="end" font-size="8" fill="#888" font-family="system-ui,sans-serif">90°</text>
+                            <text x="80" y="172" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">180°</text>
+                            <text x="7" y="93" text-anchor="start" font-size="8" fill="#888" font-family="system-ui,sans-serif">270°</text>
+                            <g transform="translate(80,90)">
+                                <g id="compass-arrow" transform="rotate(0)">
+                                    <line x1="0" y1="-56" x2="0" y2="-20" stroke="#1e90ff" stroke-width="3" stroke-linecap="round"/>
+                                    <polygon points="0,-8 -6,-22 6,-22" fill="#1e90ff"/>
+                                </g>
+                            </g>
+                            <circle cx="80" cy="90" r="5" fill="#e94560"/>
+                            <text id="compass-angle-text" x="80" y="186" text-anchor="middle" font-size="13" font-weight="bold" fill="#e0e0e0" font-family="system-ui,sans-serif">0°</text>
+                            <text id="compass-desc-text" x="80" y="197" text-anchor="middle" font-size="8" fill="#888" font-family="system-ui,sans-serif">Headwind</text>
+                        </svg>
+                        <p class="hint" style="text-align:center;margin-top:0.25rem;font-size:0.72rem">Click to set direction</p>
+                    </div>
+                    <div class="wind-inputs">
+                        <div class="field" style="margin-bottom:0.65rem">
+                            <label for="wind-angle">Direction (°)</label>
+                            <input type="number" id="wind-angle" value="0" min="0" max="359" step="1">
+                            <span class="hint">0°=headwind · 90°=R→L · 180°=tailwind · 270°=L→R</span>
+                        </div>
+                        <div class="row" style="margin-bottom:0.65rem">
+                            <div class="field">
+                                <label for="wind-speed">Speed</label>
+                                <input type="number" id="wind-speed" value="10" min="0" max="200" step="0.5">
+                            </div>
+                            <div class="field" style="max-width:90px">
+                                <label for="wind-unit">Unit</label>
+                                <select id="wind-unit">
+                                    <option value="mph" selected>mph</option>
+                                    <option value="fps">ft/s</option>
+                                    <option value="km/h">km/h</option>
+                                    <option value="m/s">m/s</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="wind-batch-section">
+                            <p class="hint" style="margin-bottom:0.35rem">Batch sticker set (up to 10 conditions):</p>
+                            <div id="wind-condition-list" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.4rem"></div>
+                            <button id="btn-add-wind-condition" class="btn-secondary btn-sm">+ Add to Batch</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <!-- Match-Day Conditions -->
+    <section class="card">
+        <h2>Match-Day Conditions</h2>
+        <div class="row">
+            <div class="field">
+                <label for="zero-yards" id="zero-yards-label">Zero Distance (yd)</label>
+                <input type="number" id="zero-yards" value="50" min="1" step="1">
+            </div>
+            <div class="field">
+                <label for="sight-height-in">Scope Height (inches)</label>
+                <input type="number" id="sight-height-in" value="1.5" min="0.5" max="4.0" step="0.1">
+            </div>
+            <div class="field">
+                <label for="temp-f">Temperature (°F)</label>
+                <input type="number" id="temp-f" value="59" min="-30" max="120" step="1">
+            </div>
+            <div class="field">
+                <label for="altitude-ft">Elevation (ft)</label>
+                <input type="number" id="altitude-ft" value="0" min="-200" max="15000" step="50">
+            </div>
+        </div>
+    </section>
+
+    <!-- Output Distances -->
+    <section class="card">
+        <h2>Output Distances <span class="hint">(up to 10)</span></h2>
+        <div id="output-distances" class="distance-grid"></div>
+        <div class="row preset-row">
+            <span class="hint preset-label">Quick add:</span>
+            <div class="preset-chips">
+                <button class="btn-preset" data-dist="25">25</button>
+                <button class="btn-preset" data-dist="50">50</button>
+                <button class="btn-preset" data-dist="75">75</button>
+                <button class="btn-preset" data-dist="100">100</button>
+                <button class="btn-preset" data-dist="150">150</button>
+                <button class="btn-preset" data-dist="200">200</button>
+                <button class="btn-preset" data-dist="250">250</button>
+                <button class="btn-preset" data-dist="300">300</button>
+            </div>
+        </div>
+        <div class="row">
+            <input type="number" id="new-distance" placeholder="Custom distance (yards)" min="10" step="5">
+            <button id="btn-add-distance" class="btn-secondary btn-sm">Add</button>
+        </div>
+    </section>
+
+    <!-- Calculate -->
+    <section class="card">
+        <h2>Calculate</h2>
+        <button id="btn-calculate" class="btn-primary btn-lg">Calculate DOPE</button>
+        <div id="results-table" class="hidden">
+            <h3>Calculated Adjustments</h3>
+            <table id="results">
+                <thead>
+                    <tr>
+                        <th id="results-dist-header">Distance (yd)</th>
+                        <th id="results-adj-header">Adjustment (mil)</th>
+                        <th id="results-clicks-header">Clicks (0.1 mil)</th>
+                        <th id="results-windage-header" class="hidden">Windage (mil)</th>
+                        <th>Include in Sticker</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Print Section -->
+    <section class="card" id="print-section">
+        <h2>Print Sticker</h2>
+        <div class="print-layout">
+            <div class="print-controls">
+                <div id="niimbot-status" class="niimbot-status">No printer connected</div>
+                <p id="niimbot-unavailable" class="niimbot-unavailable hidden">
+                    Web Bluetooth not available. Use Chrome or Edge on Android or desktop to print directly.
+                </p>
+                <div class="row" style="flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+                    <button id="btn-connect-niimbot" class="btn-secondary">Connect Niimbot B1</button>
+                    <button id="btn-print-sticker" class="btn-primary hidden">Print Sticker</button>
+                    <button id="btn-print-batch" class="btn-secondary hidden">Print Batch</button>
+                </div>
+                <div id="print-progress" class="hidden">
+                    <progress id="print-progress-bar" value="0" max="400"></progress>
+                    <span id="print-progress-text">Sending...</span>
+                </div>
+                <div style="margin-top:0.75rem">
+                    <button id="btn-save-png" class="btn-secondary btn-sm hidden">Save as PNG</button>
+                </div>
+            </div>
+            <div class="sticker-preview-wrap">
+                <p class="hint">Sticker preview:</p>
+                <div id="sticker-preview-outer">
+                    <canvas id="sticker-canvas" class="hidden" width="144" height="144"></canvas>
+                    <span id="preview-placeholder" class="preview-placeholder">Calculate DOPE first</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="/pwa/js/app.js"></script>
+</body>
+</html>

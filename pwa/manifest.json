@@ -1,0 +1,14 @@
+{
+  "name": "DOPE Calculator",
+  "short_name": "DOPE",
+  "description": "Offline ballistics DOPE calculator and Niimbot sticker printer",
+  "start_url": "/pwa/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1565C0",
+  "icons": [
+    { "src": "/pwa/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/pwa/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
