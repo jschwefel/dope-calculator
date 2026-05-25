@@ -1,5 +1,5 @@
 {
-  "name": "DOPE Calculator",
+  "name": "DOPE Sticker Calculator",
   "short_name": "DOPE",
   "description": "Offline ballistics DOPE calculator and Niimbot sticker printer",
   "start_url": "/pwa/",

@@ -1,6 +1,23 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Jason M. Schwefel
+#
+# This file is part of DOPE Sticker Calculator.
+#
+# DOPE Sticker Calculator is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DOPE Sticker Calculator is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DOPE Sticker Calculator.  If not, see <https://www.gnu.org/licenses/>.
+
 """
-dope-admin — CLI for the DOPE Calculator admin API.
+dope-sticker-admin — CLI for the DOPE Sticker Calculator admin API.
 
 Admin key is read from the DOPE_ADMIN_KEY environment variable.
 Override the server URL with DOPE_URL (default: http://localhost:5000).
@@ -172,8 +189,8 @@ def cmd_visits(args):
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="dope-admin",
-        description="Admin CLI for the DOPE Calculator.",
+        prog="dope-sticker-admin",
+        description="Admin CLI for the DOPE Sticker Calculator.",
     )
     sub = p.add_subparsers(dest="group", metavar="COMMAND")
     sub.required = True
