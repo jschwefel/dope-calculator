@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<!--
+    Copyright (C) 2026 Jason M. Schwefel
+
+    This file is part of DOPE Sticker Calculator.
+
+    DOPE Sticker Calculator is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    DOPE Sticker Calculator is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with DOPE Sticker Calculator.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide — DOPE Sticker Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* ── Guide-specific styles ─────────────────────────────────────── */
+        body { padding-bottom: 4rem; }
+
+        .guide-nav {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .guide-nav h2 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.6rem;
+            border-bottom: none;
+            padding-bottom: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .guide-nav ol {
+            list-style: decimal;
+            padding-left: 1.3rem;
+            columns: 2;
+            column-gap: 2rem;
+        }
+        .guide-nav li { margin-bottom: 0.3rem; }
+        .guide-nav a { color: var(--blue); text-decoration: none; font-size: 0.88rem; }
+        .guide-nav a:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            .guide-nav ol { columns: 1; }
+        }
+
+        .guide-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            scroll-margin-top: 1rem;
+        }
+        .guide-section a { color: #7ec8f7; }
+        .guide-section a:hover { color: #fff; text-decoration: underline; }
+        .guide-section h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .guide-section h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--blue);
+            margin: 1.2rem 0 0.5rem;
+        }
+        .guide-section h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0.9rem 0 0.35rem;
+        }
+        .guide-section p { margin-bottom: 0.75rem; line-height: 1.65; }
+        .guide-section p:last-child { margin-bottom: 0; }
+        .guide-section ul, .guide-section ol {
+            padding-left: 1.4rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+        .guide-section li { margin-bottom: 0.3rem; }
+        .guide-section table {
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        .guide-section th { font-size: 0.78rem; }
+
+        /* Callout boxes */
+        .callout {
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            margin: 0.9rem 0;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+        .callout strong { display: block; margin-bottom: 0.3rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .callout-pwa   { background: #0d1b3e; border-left: 3px solid var(--blue);  color: #b3d4ff; }
+        .callout-pwa strong   { color: var(--blue); }
+        .callout-web   { background: #2a1500; border-left: 3px solid var(--amber); color: #ffd9a0; }
+        .callout-web strong   { color: var(--amber); }
+        .callout-tip   { background: #0d2a0d; border-left: 3px solid var(--green); color: #b3ffb3; }
+        .callout-tip strong   { color: var(--green); }
+        .callout-note  { background: #1a1a2e; border-left: 3px solid #555;        color: var(--text-muted); }
+        .callout-note strong  { color: #aaa; }
+
+        /* Comparison table */
+        .compare-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 0.75rem; }
+        .compare-table th { background: var(--surface2); padding: 0.5rem 0.75rem; text-align: left; font-size: 0.78rem; color: var(--text-muted); }
+        .compare-table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .compare-table tr:last-child td { border-bottom: none; }
+        .check { color: var(--green); font-weight: 700; }
+        .cross { color: var(--red);   font-weight: 700; }
+
+        /* Steps — higher specificity to override .guide-section ol padding */
+        .guide-section .steps { counter-reset: step; list-style: none; padding-left: 0; }
+        .guide-section .steps li {
+            counter-increment: step;
+            display: flex;
+            gap: 0.85rem;
+            margin-bottom: 0.9rem;
+            align-items: flex-start;
+        }
+        .guide-section .steps li::before {
+            content: counter(step);
+            background: var(--blue);
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.8rem;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 0.2rem;
+        }
+        .guide-section .steps li > div { flex: 1; min-width: 0; }
+        .guide-section .steps .step-title { font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
+        .guide-section .steps li p { margin-bottom: 0; }
+
+        /* FAQ */
+        .faq-item { margin-bottom: 1rem; }
+        .faq-q {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.3rem;
+            font-size: 0.95rem;
+        }
+        .faq-q::before { content: 'Q: '; color: var(--blue); }
+        .faq-a { color: var(--text); line-height: 1.65; font-size: 0.9rem; padding-left: 1.3rem; }
+
+        /* Sticker diagram */
+        .sticker-diagram {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        .sticker-diagram svg text { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        .kbd {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: var(--text);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>DOPE Sticker Calculator</h1>
+        <p class="subtitle">User Guide &amp; FAQ</p>
+    </header>
+
+    <!-- Table of Contents -->
+    <nav class="guide-nav" aria-label="Guide sections">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#what-is-dope">What Is DOPE?</a></li>
+            <li><a href="#two-versions">Web App vs. PWA</a></li>
+            <li><a href="#install-pwa">Installing the PWA</a></li>
+            <li><a href="#quick-start">Quick Start</a></li>
+            <li><a href="#session">Session</a></li>
+            <li><a href="#ammunition">Ammunition</a></li>
+            <li><a href="#dope-entries">Range DOPE Entries</a></li>
+            <li><a href="#wind">Wind Conditions</a></li>
+            <li><a href="#matchday">Match-Day Conditions</a></li>
+            <li><a href="#distances">Output Distances</a></li>
+            <li><a href="#calculate">Calculate &amp; Results</a></li>
+            <li><a href="#sticker">The Sticker</a></li>
+            <li><a href="#print">Generating &amp; Printing</a></li>
+            <li><a href="#sessions">Saving &amp; Loading Sessions</a></li>
+            <li><a href="#faq">FAQ</a></li>
+        </ol>
+    </nav>
+
+    <!-- 1. What Is DOPE -->
+    <section class="guide-section" id="what-is-dope">
+        <h2>1. What Is DOPE?</h2>
+        <p><strong>DOPE</strong> stands for <strong>Data On Previous Engagements</strong>. It's your personal log of the scope adjustments that actually put your bullet on target at each distance. Every rifle, load, and scope combination is different — your DOPE is the ground truth that accounts for all of it.</p>
+        <p>This app takes your real range data and extrapolates it across new distances, while also correcting for environmental differences between the day you collected your data and the day you're shooting. The result is a custom cheat sheet, printed as a small round sticker that goes right on your rifle stock or turret cap.</p>
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            The more range data you collect, the more accurate your interpolation will be. Three entries are the minimum; six to eight spread across your full distance range work best.
+        </div>
+    </section>
+
+    <!-- 2. Two Versions -->
+    <section class="guide-section" id="two-versions">
+        <h2>2. Web App vs. PWA — Which Should You Use?</h2>
+        <p>The calculator comes in two flavors that share the same math engine but differ in how they run and print.</p>
+
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Web App <span style="font-weight:400;color:var(--text-muted)">(dope.schwefel.net)</span></th>
+                    <th>PWA <span style="font-weight:400;color:var(--text-muted)">(dope.schwefel.net/pwa/)</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Works offline</td><td class="cross">✗ Requires internet</td><td class="check">✓ Fully offline</td></tr>
+                <tr><td>Installs on phone/desktop</td><td class="cross">✗</td><td class="check">✓ Home screen icon</td></tr>
+                <tr><td>Direct Niimbot B1 printing</td><td class="cross">✗</td><td class="check">✓ via Web Bluetooth</td></tr>
+                <tr><td>Save sticker as PNG</td><td class="cross">✗</td><td class="check">✓ (use for iOS AirPrint)</td></tr>
+                <tr><td>Avery 8293 PDF output</td><td class="check">✓ Label sheet PDF</td><td class="cross">✗</td></tr>
+                <tr><td>Fill entire label sheet</td><td class="check">✓ All 20 positions</td><td class="cross">✗</td></tr>
+                <tr><td>Ammo database</td><td class="check">✓ Shared server DB + local add</td><td class="check">✓ Cached locally, sync when online</td></tr>
+                <tr><td>Session save / load (.dope)</td><td class="check">✓</td><td class="check">✓</td></tr>
+                <tr><td>Wind conditions</td><td class="check">✓</td><td class="check">✓</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Which should I use?</h3>
+        <ul>
+            <li><strong>At the range with a Niimbot B1 printer</strong> — Use the <strong>PWA</strong>. Print directly from your phone without a computer or internet connection.</li>
+            <li><strong>At home, printing a sheet of labels for multiple rifles</strong> — Use the <strong>Web App</strong>. Generate an Avery 8293 PDF and print to any printer.</li>
+            <li><strong>On an iPhone without a Niimbot</strong> — Use the <strong>PWA</strong>, save the sticker as a PNG, then print via AirPrint or share it.</li>
+        </ul>
+    </section>
+
+    <!-- 3. Install PWA -->
+    <section class="guide-section" id="install-pwa">
+        <h2>3. Installing the PWA</h2>
+        <p>Installing the PWA puts a shortcut on your home screen and allows it to run offline — including the full ballistics engine. No app store required.</p>
+
+        <div class="callout callout-pwa">
+            <strong>PWA Only</strong>
+            The install option is only available for the PWA at <strong>/pwa/</strong>. The regular web app cannot be installed.
+        </div>
+
+        <h3>Android (Chrome)</h3>
+        <ol>
+            <li>Open <strong>Chrome</strong> and navigate to <a href="https://dope.schwefel.net/pwa/" target="_blank" rel="noopener"><code>https://dope.schwefel.net/pwa/</code></a>.</li>
+            <li>Tap the three-dot menu in the top-right corner.</li>
+            <li>Tap <strong>Add to Home screen</strong> (or an install banner may appear automatically at the bottom of the screen — tap <strong>Install</strong>).</li>
+            <li>Confirm the name and tap <strong>Add</strong>. The app icon appears on your home screen.</li>
+        </ol>
+
+        <h3>iPhone / iPad (Safari)</h3>
+        <ol>
+            <li>Open <strong>Safari</strong> (must be Safari — Chrome on iOS cannot install PWAs).</li>
+            <li>Navigate to <a href="https://dope.schwefel.net/pwa/" target="_blank" rel="noopener"><code>https://dope.schwefel.net/pwa/</code></a>.</li>
+            <li>Tap the <strong>Share</strong> button (the box with an arrow pointing up).</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Confirm the name and tap <strong>Add</strong>.</li>
+        </ol>
+
+        <h3>Desktop (Chrome or Edge)</h3>
+        <ol>
+            <li>Navigate to <a href="https://dope.schwefel.net/pwa/" target="_blank" rel="noopener"><code>https://dope.schwefel.net/pwa/</code></a> in Chrome or Edge.</li>
+            <li>Look for a small install icon (computer with a down-arrow) in the address bar, or open the browser menu and choose <strong>Install DOPE Sticker Calculator</strong>.</li>
+            <li>Click <strong>Install</strong>. The app opens in its own window and a shortcut is added to your taskbar and Start menu / Applications folder.</li>
+        </ol>
+
+        <div class="callout callout-note">
+            <strong>Note</strong>
+            After installing, the app caches all its files automatically. You can then turn off Wi-Fi and it will still load, calculate, and print (Niimbot) without any internet connection.
+        </div>
+    </section>
+
+    <!-- 4. Quick Start -->
+    <section class="guide-section" id="quick-start">
+        <h2>4. Quick Start</h2>
+        <p>Already familiar with ballistics tools? Here's the shortest path from nothing to a printed sticker:</p>
+        <ol class="steps">
+            <li><div>
+                <p class="step-title">Pick your ammo</p>
+                <p>Select your caliber and load from the Ammunition section. Verify or type in your muzzle velocity and BC. Choose G7 if you have it; otherwise use G1.</p>
+            </div></li>
+            <li><div>
+                <p class="step-title">Enter your range DOPE</p>
+                <p>Add at least three distance/adjustment pairs from your actual range sessions. More entries = better accuracy.</p>
+            </div></li>
+            <li><div>
+                <p class="step-title">Set match-day conditions</p>
+                <p>Enter today's temperature and elevation, plus your scope height and zero distance.</p>
+            </div></li>
+            <li><div>
+                <p class="step-title">Add output distances</p>
+                <p>Use the preset buttons or type custom distances for every range you'll engage.</p>
+            </div></li>
+            <li><div>
+                <p class="step-title">Calculate, select, and print</p>
+                <p>Hit <strong>Calculate DOPE</strong>, check which distances you want on the sticker (up to 8), then generate the PDF or print via Niimbot.</p>
+            </div></li>
+        </ol>
+    </section>
+
+    <!-- 5. Session -->
+    <section class="guide-section" id="session">
+        <h2>5. Session</h2>
+        <p>The Session section at the top lets you name your current setup and choose your units. It also controls save and load.</p>
+
+        <h3>Session Name</h3>
+        <p>Give this session a descriptive name like <em>Rifle 1 – NRL22 Summer 2026</em>. The name appears in the PDF filename when you download it, making it easy to keep multiple sessions organized.</p>
+
+        <h3>Distance Unit</h3>
+        <p>Choose <strong>Yards</strong> or <strong>Meters</strong>. This setting applies everywhere: DOPE entry distances, output distances, and the results table. Make sure it matches the distances you'll actually be shooting.</p>
+
+        <h3>Adjustment Unit</h3>
+        <p>Choose the unit that matches your scope's turret markings:</p>
+        <ul>
+            <li><strong>MRAD (mil)</strong> — One mil is 3.6 inches at 100 yards. Most modern tactical scopes (especially those used in NRL22 and PRS) use 0.1 mil clicks.</li>
+            <li><strong>MOA</strong> — One MOA is approximately 1.047 inches at 100 yards. Common on hunting scopes; typically 1/4 MOA clicks.</li>
+        </ul>
+
+        <h3>Save / Load</h3>
+        <p>See <a href="#sessions">Saving &amp; Loading Sessions</a> below for full details.</p>
+    </section>
+
+    <!-- 6. Ammunition -->
+    <section class="guide-section" id="ammunition">
+        <h2>6. Ammunition</h2>
+        <p>The Ammunition section sets the ballistic properties of your load. These are used to model how your bullet decelerates through the air and how that behavior changes with temperature and altitude.</p>
+
+        <h3>Caliber and Load</h3>
+        <p>Select your caliber from the first dropdown, then choose your specific load from the second. The velocity and BC fields populate automatically. You can override any field — if your chronograph says your load is running 1,040 fps instead of the listed 1,070, change it.</p>
+
+        <div class="callout callout-web">
+            <strong>Web App Only</strong>
+            The web app pulls ammo data from a shared server database. You can add new entries (saved to the server for all users) or edit and delete existing ones.
+        </div>
+        <div class="callout callout-pwa">
+            <strong>PWA</strong>
+            The PWA caches the ammo list from the server the first time it connects. After that, the list works offline. Use <strong>↻ Sync with Server</strong> to pull any new additions. You can also add ammo locally — those entries are stored on your device only and will not appear for other users.
+        </div>
+
+        <h3>BC Model — G1 vs. G7</h3>
+        <p>The Ballistic Coefficient (BC) describes how well a bullet resists drag. A higher number means less drag and a flatter trajectory. There are two industry-standard drag models:</p>
+        <ul>
+            <li><strong>G1</strong> — Based on an old round-nose flat-base projectile. Most manufacturers publish G1 BCs because they look more impressive on paper. G1 BCs are typically 0.3–0.6 for rifle bullets.</li>
+            <li><strong>G7</strong> — Based on a long boat-tail spitzer (the shape of most modern match bullets). Far more accurate at long range. G7 BCs are typically 0.15–0.35 for the same bullet with a G1 BC of 0.4–0.6.</li>
+        </ul>
+        <p>If your ammo box or the manufacturer's website lists a G7 BC, use it — it will give you more accurate environmental corrections. If you only have G1, that works fine too.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            For .22 LR (the primary use case this app was built around), published G7 BCs are rare. Use G1 with the manufacturer's listed value. Common match-grade .22 LR loads run in the 0.125–0.175 G1 range.
+        </div>
+
+        <h3>Adding Ammo</h3>
+        <p>Click <strong>+ Add Ammo to DB</strong> (web app) or <strong>+ Add Local Ammo</strong> (PWA) to open the add form. Fill in the caliber, load name, muzzle velocity, and both BC values. The app stores both G1 and G7 so you can switch models later without re-entering data.</p>
+    </section>
+
+    <!-- 7. Range DOPE Entries -->
+    <section class="guide-section" id="dope-entries">
+        <h2>7. Range DOPE Entries</h2>
+        <p>This is where you enter your observed data — the actual adjustments you dialed in at the range to hit targets at known distances. This is the foundation that everything else is built on.</p>
+
+        <h3>Minimum 3 Entries</h3>
+        <p>The interpolation engine needs at least three data points to fit a curve. More is better. Ideally you have data at both shorter and longer distances than any distance you'll be calculating for.</p>
+
+        <h3>What to Enter</h3>
+        <ul>
+            <li><strong>Distance</strong> — The distance in your selected unit (yards or meters) at which you confirmed the adjustment.</li>
+            <li><strong>Adjustment</strong> — The total elevation adjustment you dialed to hit the target. Enter it as a signed number: positive means up, negative means down.</li>
+        </ul>
+        <p>For example: if you dialed +4.2 mil to hit at 200 yards, enter <code>200</code> and <code>4.2</code>.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            Use data you trust. A confirmed cold-bore first-round hit is more valuable than data you eyeballed in a rush. If you have any doubt about an entry, leave it out and get a clean confirmation.
+        </div>
+
+        <h3>Range Conditions (optional)</h3>
+        <p>If the weather when you shot your DOPE data was significantly different from today, enter the conditions from that day:</p>
+        <ul>
+            <li><strong>Range Temperature (°F)</strong> — The temperature when you collected the data. Hot air is less dense; cold air is more dense. This affects bullet deceleration.</li>
+            <li><strong>Range Elevation (ft)</strong> — The altitude of the range where your data was collected. Higher altitude means thinner air, less drag, flatter trajectory.</li>
+        </ul>
+        <p>Leave these fields blank to use today's match-day conditions for both the data and the output — effectively telling the app your conditions are the same as when you shot your data.</p>
+
+        <h3>Adding and Removing Entries</h3>
+        <p>Click <strong>+ Add Entry</strong> to add a new row. Click the red <strong>×</strong> button on any row to remove it. There is no hard limit on the number of entries you can add for the calculation, but only up to 8 will fit on the printed sticker.</p>
+    </section>
+
+    <!-- 8. Wind Conditions -->
+    <section class="guide-section" id="wind">
+        <h2>8. Wind Conditions</h2>
+        <p>The Wind Conditions section is collapsed by default, which means the calculator assumes calm (no wind). Click the <strong>Wind Conditions</strong> header to expand it and enter wind data.</p>
+
+        <h3>Wind Direction</h3>
+        <p>Wind direction is measured as the angle from directly in front of you (0° = headwind, coming straight at your face from the target). The interactive compass lets you click anywhere on the circle to set the direction visually, or you can type an angle directly.</p>
+        <ul>
+            <li><strong>0°</strong> — Headwind (coming from the target toward you). Pushes bullet back slightly; minimal lateral drift.</li>
+            <li><strong>90°</strong> — Right-to-left crosswind (from your right). Drifts bullet left.</li>
+            <li><strong>180°</strong> — Tailwind (coming from behind you). Slight velocity boost; minimal lateral drift.</li>
+            <li><strong>270°</strong> — Left-to-right crosswind (from your left). Drifts bullet right.</li>
+        </ul>
+        <p>Pure headwinds and tailwinds produce almost no windage correction — the crosswind component is what drives lateral drift. The full-value crosswind (90° or 270°) produces the maximum correction.</p>
+
+        <h3>Wind Speed and Unit</h3>
+        <p>Enter the wind speed and select the unit — mph, ft/s, km/h, or m/s. When in doubt, use mph; most range flags and Kestrel meters in the US report in mph.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            Wind at the range is almost never perfectly constant. The calculator gives you a point-in-time correction for the speed and direction you enter. For match shooting, use the wind at the time of your shot — not an average.
+        </div>
+    </section>
+
+    <!-- 9. Match-Day Conditions -->
+    <section class="guide-section" id="matchday">
+        <h2>9. Match-Day Conditions</h2>
+        <p>These are the environmental and equipment conditions <em>right now</em>, at the match or range session you're about to shoot. The calculator uses these to adjust your DOPE for current conditions.</p>
+
+        <h3>Zero Distance</h3>
+        <p>The distance at which you zeroed your scope. Your zero is the single distance where your point of aim and point of impact perfectly overlap without any dialed adjustment. For NRL22, a 50-yard zero is common; for longer-range rifle, 100 yards is typical.</p>
+
+        <h3>Scope Height (inches)</h3>
+        <p>The vertical distance from the center of your scope's optic to the center of your rifle's bore. A typical rifle with a standard mount runs about 1.5 inches. A suppressor-height mount might be 1.75–2.0 inches. This affects near-distance trajectory calculations.</p>
+
+        <h3>Temperature (°F)</h3>
+        <p>Today's air temperature. Hot air is less dense, which means less drag and a slightly flatter trajectory. Cold air is denser, which means more drag and a slightly higher hold. The calculator corrects your range DOPE for this difference.</p>
+
+        <h3>Elevation (ft)</h3>
+        <p>Today's altitude above sea level. Higher altitude means thinner air, less drag. If you shot your range DOPE at sea level and you're shooting today at 5,000 feet, your bullet will hit slightly high without a correction — the calculator handles this automatically.</p>
+    </section>
+
+    <!-- 10. Output Distances -->
+    <section class="guide-section" id="distances">
+        <h2>10. Output Distances</h2>
+        <p>Output distances are the specific distances you want the calculator to generate adjustments for. These become the rows in your results table, and up to 8 of them go on your sticker.</p>
+
+        <h3>Quick Add Presets</h3>
+        <p>Click any of the preset buttons (25, 50, 75, 100, 150, 200, 250, 300) to add that distance in one tap. Presets use your selected distance unit.</p>
+
+        <h3>Custom Distance</h3>
+        <p>Type any distance into the input field and click <strong>Add</strong>. You can add as many distances as you need — there is no limit.</p>
+
+        <h3>Removing a Distance</h3>
+        <p>Each distance appears as a pill/chip with a small <strong>×</strong>. Click the × to remove it.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            Add every distance on your course of fire, even the short ones. Short distances like 25 yards often need a hold-down because of scope-over-bore offset at close range, and the calculator will tell you exactly how much.
+        </div>
+    </section>
+
+    <!-- 11. Calculate & Results -->
+    <section class="guide-section" id="calculate">
+        <h2>11. Calculate &amp; Results</h2>
+
+        <h3>Calculate DOPE Button</h3>
+        <p>Once you have your ammo, DOPE entries, conditions, and output distances set, click the big <strong>Calculate DOPE</strong> button. The app runs the full ballistics model and populates the results table.</p>
+
+        <h3>Reading the Results Table</h3>
+        <p>Each row in the results table shows:</p>
+        <ul>
+            <li><strong>Distance</strong> — The output distance (in your selected unit, shown in blue).</li>
+            <li><strong>Adjustment</strong> — The elevation correction to dial on your scope, in your selected unit (green = up, red = down, gray = zero).</li>
+            <li><strong>Clicks</strong> — The same elevation correction expressed in scope clicks. The click value is automatically calculated for 0.1 mil (MRAD) or 0.25 MOA increments, whichever unit you selected. Round to the nearest whole click.</li>
+            <li><strong>Windage</strong> — Appears only when wind is entered. The left-right correction to dial or hold, in the same unit as your elevation. Shown in amber.</li>
+            <li><strong>Include in Sticker</strong> — A checkbox. The first 8 rows are pre-checked. Check or uncheck to control which distances appear on the printed sticker. You cannot check more than 8 at a time.</li>
+        </ul>
+
+        <h3>Negative Adjustments at Short Distances</h3>
+        <p>It's normal to see a negative (hold-down) adjustment at short distances. This happens because your scope is mounted above the bore — at close range, the bullet hasn't risen far enough to reach your line of sight yet, so you actually need to aim slightly above the target. The amount depends on your scope height and zero distance.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            If the results look wildly off, double-check your zero distance and scope height. A 50-yard zero entered as a 50-meter zero, or a scope height of 1.5 cm entered as 1.5 inches, will skew every distance.
+        </div>
+    </section>
+
+    <!-- 12. The Sticker -->
+    <section class="guide-section" id="sticker">
+        <h2>12. The Sticker</h2>
+
+        <h3>Layout</h3>
+        <p>The sticker uses a two-column layout split down the center. Each half holds one distance/adjustment pair. Up to 8 pairs fill the circle from top to bottom.</p>
+
+        <div class="sticker-diagram">
+            <!--
+                3 rows (6 entries). r=96, usableH=174.7, rowH=58.2, topY=12.6
+                Separators at y=71, y=129. Baselines at y=45, y=104, y=162.
+                At y=162 (worst case) circle half-width=73.3px.
+                Column x positions derived from circle constraint:
+                  left-dist  right-aligns at x=95  (5px gap from center)
+                  left-adj   right-aligns at x=69  (dist-width=21 + gap=5)
+                  right-dist left-aligns  at x=105 (5px gap from center)
+                  right-adj  left-aligns  at x=131 (dist-width=21 + gap=5)
+                At y=162: adj starts at 69-35=34 > 26.7 circle edge ✓
+                          adj ends  at 131+35=166 < 173.3 circle edge ✓
+            -->
+            <svg width="200" height="200" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="96" fill="#fff" stroke="#ccc" stroke-width="1.5"/>
+                <line x1="100" y1="13"  x2="100" y2="187" stroke="#333" stroke-width="1"/>
+                <line x1="16"  y1="71"  x2="184" y2="71"  stroke="#ccc" stroke-width="0.75"/>
+                <line x1="16"  y1="129" x2="184" y2="129" stroke="#ccc" stroke-width="0.75"/>
+                <!-- Row 1: 50yd −0.6 | 100yd +2.4 -->
+                <text x="95"  y="45" text-anchor="end"   font-size="11" font-weight="700" fill="#1565C0">50</text>
+                <text x="69"  y="45" text-anchor="end"   font-size="11" font-weight="700" fill="#555">-0.6</text>
+                <text x="105" y="45" text-anchor="start" font-size="11" font-weight="700" fill="#1565C0">100</text>
+                <text x="131" y="45" text-anchor="start" font-size="11" font-weight="700" fill="#2e7d32">+2.4</text>
+                <!-- Row 2: 150yd +5.1 | 200yd +8.3 -->
+                <text x="95"  y="104" text-anchor="end"   font-size="11" font-weight="700" fill="#1565C0">150</text>
+                <text x="69"  y="104" text-anchor="end"   font-size="11" font-weight="700" fill="#2e7d32">+5.1</text>
+                <text x="105" y="104" text-anchor="start" font-size="11" font-weight="700" fill="#1565C0">200</text>
+                <text x="131" y="104" text-anchor="start" font-size="11" font-weight="700" fill="#2e7d32">+8.3</text>
+                <!-- Row 3: 250yd +12.0 | 300yd +16.4 -->
+                <text x="95"  y="162" text-anchor="end"   font-size="11" font-weight="700" fill="#1565C0">250</text>
+                <text x="69"  y="162" text-anchor="end"   font-size="11" font-weight="700" fill="#2e7d32">+12.0</text>
+                <text x="105" y="162" text-anchor="start" font-size="11" font-weight="700" fill="#1565C0">300</text>
+                <text x="131" y="162" text-anchor="start" font-size="11" font-weight="700" fill="#2e7d32">+16.4</text>
+            </svg>
+        </div>
+
+        <p><strong>Left half:</strong> adjustment | distance. <strong>Right half:</strong> distance | adjustment. The vertical center line is the divider. Horizontal lines separate the rows.</p>
+        <p>Distance values are shown in blue. Adjustment values are color-coded: <span style="color:#2e7d32">green for positive (up)</span>, <span style="color:#c62828">red for negative (down)</span>, gray for zero. On the printed sticker (thermal or PDF), everything is printed in black — the color coding is only on the preview.</p>
+
+        <h3>Wind Sub-Line</h3>
+        <p>When wind conditions are entered, a smaller number appears below each distance pair. This is the windage correction — how much to dial or hold left/right for the wind conditions you specified. The number uses the same units as your elevation adjustment.</p>
+        <p>A right-to-left wind (90°) will show a positive windage value (dial right); a left-to-right wind (270°) will show a negative value (dial left). Confirm which direction your scope dials — most scopes dial in the direction of bullet movement.</p>
+
+        <h3>8-Entry Limit</h3>
+        <p>The circular sticker only has room for 8 pairs while keeping the text large enough to read quickly. You can calculate as many distances as you want, but only 8 can go on the sticker. Choose the distances most relevant to your specific course of fire.</p>
+
+        <h3>Preview</h3>
+        <p>The sticker preview updates automatically as you check and uncheck rows in the results table. What you see in the preview is exactly what will be printed.</p>
+    </section>
+
+    <!-- 13. Generating & Printing -->
+    <section class="guide-section" id="print">
+        <h2>13. Generating &amp; Printing</h2>
+
+        <div class="callout callout-web">
+            <strong>Web App — Avery 8293 PDF</strong>
+            The web app generates a PDF sized for Avery 8293 label sheets. These are 1.5-inch round labels, 20 to a sheet, arranged in a 4×5 grid. You can download the PDF and print to any printer.
+        </div>
+
+        <h3>Web App: Generate Sticker PDF</h3>
+        <p>After calculating, scroll to the <strong>Generate Sticker PDF</strong> section.</p>
+        <ul>
+            <li><strong>Label Row / Label Column</strong> — Select which position on the sheet to print your sticker. Row 1–5, Column 1–4. Click a cell in the grid diagram to select visually. This lets you use partially-used sheets without wasting labels.</li>
+            <li><strong>Fill entire sheet</strong> — Check this box to print the same sticker on all 20 positions. Useful when you want multiple copies or are sharing stickers with other shooters running the same load.</li>
+            <li><strong>Printer Calibration Offset</strong> — If your printer prints slightly off from where the labels are on the sheet, enter an X (horizontal) and Y (vertical) offset in inches. Print one test sheet on plain paper, hold it up to a label sheet, measure the misalignment, and enter that value. This is a per-printer setting you only need to set once.</li>
+            <li><strong>Download PDF</strong> — Generates and downloads the PDF. Open it in your PDF viewer and print at 100% scale (no scaling, no fit-to-page).</li>
+        </ul>
+
+        <div class="callout callout-tip">
+            <strong>Tip — Print at 100%</strong>
+            When printing the PDF, make sure your printer is set to print at <strong>actual size / 100% scale</strong>, not "fit to page." Fit-to-page will shrink the layout and the stickers won't line up with the labels on the sheet.
+        </div>
+
+        <div class="callout callout-pwa">
+            <strong>PWA — Niimbot B1 Direct Print</strong>
+            The PWA can print directly to a Niimbot B1 label printer over Bluetooth. No computer, no PDF, no cable. The sticker prints as a 50mm × 50mm thermal label at 203 DPI.
+        </div>
+
+        <h3>PWA: Connect to Niimbot B1</h3>
+        <ol>
+            <li>Power on your Niimbot B1 and make sure Bluetooth is enabled on your phone or computer.</li>
+            <li>In the PWA, scroll to <strong>Print Sticker</strong> and click <strong>Connect Niimbot B1</strong>.</li>
+            <li>Your browser will show a Bluetooth device picker. Select your Niimbot from the list.</li>
+            <li>Once connected, the status bar turns green. Click <strong>Print Sticker</strong>. A progress bar shows the print job sending line by line.</li>
+        </ol>
+
+        <div class="callout callout-note">
+            <strong>Browser Support for Web Bluetooth</strong>
+            Web Bluetooth is supported in Chrome and Edge on Android, Windows, and macOS. It is <strong>not supported in Firefox or in any browser on iPhone/iPad</strong> — Apple does not allow Web Bluetooth on iOS. iPhone users should use the PNG save option instead.
+        </div>
+
+        <h3>PWA: Save as PNG (iOS workaround)</h3>
+        <p>After calculating, click <strong>Save as PNG</strong> in the Print Sticker section. This downloads the sticker canvas as a 400×400 pixel PNG image. From your phone's Photos app or Files app, you can print it via AirPrint to any compatible printer, or share it to another device.</p>
+        <p>The PNG prints in black and white, exactly matching the thermal sticker output.</p>
+    </section>
+
+    <!-- 14. Sessions -->
+    <section class="guide-section" id="sessions">
+        <h2>14. Saving and Loading Sessions</h2>
+        <p>The app can save and restore your entire setup — ammunition selection, DOPE entries, conditions, and output distances — as a <code>.dope</code> file. This lets you maintain separate setups for different rifles, and pick up exactly where you left off.</p>
+
+        <h3>Save a Session</h3>
+        <p>Click <strong>Save .dope</strong> in the Session section. Your browser downloads a small JSON file named after your session. Store it anywhere — phone, cloud, laptop.</p>
+
+        <h3>Load a Session</h3>
+        <p>Click <strong>Load .dope</strong> and select a previously saved file. All fields restore to their saved state. Run the calculation again to update the results for today's conditions.</p>
+
+        <div class="callout callout-tip">
+            <strong>Tip</strong>
+            Save a session immediately after entering your DOPE data and ammo. Then before each match, load the session, update the temperature and elevation for that day, and recalculate. You get a fresh sticker calibrated to current conditions without re-entering everything.
+        </div>
+
+        <h3>Session File Compatibility</h3>
+        <p>The <code>.dope</code> file format is the same for both the web app and the PWA. A session saved in one version can be loaded in the other.</p>
+    </section>
+
+    <!-- 15. FAQ -->
+    <section class="guide-section" id="faq">
+        <h2>15. FAQ</h2>
+
+        <div class="faq-item">
+            <p class="faq-q">Why do I need at least 3 DOPE entries?</p>
+            <p class="faq-a">The calculator fits a curve through your observed data points to model your bullet's trajectory. A curve requires at least 3 points to have any shape to it. With only 2, you get a straight line — useful but not accurate. With 3 or more, the curve captures the natural arc of your trajectory.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">My calculated adjustments look higher/lower than I expect. What's wrong?</p>
+            <p class="faq-a">First, verify your zero distance and scope height are correct — these two settings have the biggest effect on the output, especially at short distances. Next, double-check that your range DOPE entries are signed correctly (positive = up). Finally, make sure your distance unit (yards vs. meters) matches the distances in your DOPE entries and output distances.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Does the calculator account for my specific powder's temperature sensitivity?</p>
+            <p class="faq-a">No. The temperature correction is a physics model of air density versus temperature, not powder burn rate. If you're using an extremely temperature-sensitive propellant (some competition .22 LR loads vary significantly), your real-world velocity may differ from the listed value. Use your chronograph data from conditions as close to match day as possible.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">What is the Avery 8293, and where do I buy it?</p>
+            <p class="faq-a">The Avery 8293 is a standard sheet of 1.5-inch round labels, 20 per sheet (4 columns × 5 rows). They're widely available at office supply stores (Staples, Office Depot), Amazon, and Walmart. Search "Avery 8293" or "Avery 22807" — both are the same size.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Can I use this for centerfire rifle, not just .22 LR?</p>
+            <p class="faq-a">Yes. The ballistics engine is caliber-agnostic. Enter your muzzle velocity, BC, and real DOPE data, and it works the same way. The app was originally built for NRL22 (.22 LR) but the math applies to any rifle cartridge.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">How is windage calculated?</p>
+            <p class="faq-a">The calculator uses the Didion lag-rule method to estimate time of flight, then applies the crosswind component (wind speed × sin of the wind angle) to compute lateral drift. The result is the total windage correction at each distance for the wind conditions you entered. It is a point estimate — gusts and wind gradient with altitude are not modeled.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">The PWA isn't showing up as installable. What do I do?</p>
+            <p class="faq-a">Make sure you're using Chrome or Safari (not Firefox or a third-party in-app browser) and that you're navigating to <code>/pwa/</code>, not the root <code>/</code>. On iOS, the install option only appears in Safari's share sheet — there is no install banner. On Android, Chrome may take a few seconds after page load before the install prompt appears.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">The Niimbot print button doesn't show up in the PWA.</p>
+            <p class="faq-a">Web Bluetooth is not available on your browser or platform. You'll see a notice in the Print Sticker section explaining this. Use <strong>Save as PNG</strong> instead. This affects all browsers on iPhone and iPad, and Firefox on any platform.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Can I put the sticker on my turret cap / scope?</p>
+            <p class="faq-a">Absolutely — that's the most common use. The 1.5-inch round Avery labels fit the turret caps on most large objective scopes. Some shooters put them on the stock, the magwell, or a stock-mounted data card holder. The Niimbot thermal stickers are durable outdoors but may fade in direct sunlight over time; the Avery labels are paper and will not handle wet conditions without lamination.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">What does "fill entire sheet" do exactly?</p>
+            <p class="faq-a">When checked, the PDF engine ignores the row/column selector and prints your sticker on all 20 positions of the sheet. Every label on the sheet will be identical. Useful when you want multiple backups, or when you're printing the same load data for several identical rifles on a team.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">The sticker preview shows only 7 entries even though I entered 8. Why?</p>
+            <p class="faq-a">Look at the results table — some entries may be unchecked. The first 8 rows are checked by default, but if you manually unchecked any, the preview will reflect that. Scroll through the table and make sure exactly the 8 distances you want are checked.</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Is my data sent to a server?</p>
+            <p class="faq-a">In the <strong>PWA</strong>: all ballistics calculations run entirely on your device. Nothing is sent to a server. The only network traffic is the initial ammo sync (fetching the ammo list) and that only happens when you're online. In the <strong>web app</strong>: the calculation is performed server-side and your input data is sent with each Calculate request. No data is stored or logged beyond what your browser sends.</p>
+        </div>
+    </section>
+
+</div>
+
+<footer class="site-footer">
+    <a href="/">← Back to App</a>
+    <span class="footer-sep">·</span>
+    <a href="mailto:Jason.Schwefel78@gmail.com">Send feedback</a>
+    <span class="footer-sep">·</span>
+    <a href="https://github.com/jschwefel/dope-sticker-calculator" target="_blank" rel="noopener">GitHub</a>
+</footer>
+
+</body>
+</html>

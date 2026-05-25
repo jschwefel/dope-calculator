@@ -69,6 +69,11 @@ def index():
                            calibers=db.caliber_list())
 
 
+@bp.route("/guide")
+def guide():
+    return render_template("guide.html")
+
+
 # ── Calculate ─────────────────────────────────────────────────────────────────
 
 @bp.route("/api/calculate", methods=["POST"])
