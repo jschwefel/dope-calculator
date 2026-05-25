@@ -198,7 +198,7 @@ def _fit_font_size(c, pairs, half_w_avail, row_h, has_wind=False, decimals: int 
 # ── Sticker drawing ───────────────────────────────────────────────────────────
 
 def _draw_sticker_content(c, cx, cy, r, dope_data, wind_label="", adj_decimals: int = 1):
-    entries = [_parse_entry(e) for e in dope_data[:10]]
+    entries = [_parse_entry(e) for e in dope_data[:8]]
     if not entries:
         return
 

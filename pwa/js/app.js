@@ -501,7 +501,14 @@ function renderResultsTable() {
         });
 
     document.querySelectorAll('.sticker-check').forEach(cb => {
-        cb.addEventListener('change', updateStickerPreview);
+        cb.addEventListener('change', function () {
+            if (this.checked && document.querySelectorAll('.sticker-check:checked').length > 8) {
+                this.checked = false;
+                toast('Maximum 8 entries on sticker', 'error');
+                return;
+            }
+            updateStickerPreview();
+        });
     });
 }
 
@@ -516,7 +523,7 @@ function _getCheckedDopeData() {
     return [...document.querySelectorAll('.sticker-check:checked')]
         .map(cb => ({ dist: Number(cb.dataset.dist), adj: Number(cb.dataset.adj), wind: Number(cb.dataset.wind || 0) }))
         .sort((a, b) => a.dist - b.dist)
-        .slice(0, 10);
+        .slice(0, 8);
 }
 
 function _windLabel() {

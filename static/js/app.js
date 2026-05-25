@@ -506,7 +506,14 @@ function renderResultsTable() {
         });
 
     document.querySelectorAll('.sticker-check').forEach(cb => {
-        cb.addEventListener('change', updateStickerPreview);
+        cb.addEventListener('change', function () {
+            if (this.checked && document.querySelectorAll('.sticker-check:checked').length > 8) {
+                this.checked = false;
+                toast('Maximum 8 entries on sticker', 'error');
+                return;
+            }
+            updateStickerPreview();
+        });
     });
 }
 
@@ -533,7 +540,7 @@ function updateStickerPreview() {
             wind:     Number(cb.dataset.wind || 0),
         }))
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, 10);
+        .slice(0, 8);
 
     const hasWind = entries.some(e => Math.abs(e.wind) >= 0.05);
 
@@ -616,7 +623,7 @@ buildLabelGrid();
 $('btn-generate-pdf').addEventListener('click', async () => {
     const checked = [...document.querySelectorAll('.sticker-check:checked')];
     if (checked.length === 0) { toast('No distances selected for sticker', 'error'); return; }
-    if (checked.length > 10)  { toast('Maximum 10 entries on sticker', 'error'); return; }
+    if (checked.length > 8)  { toast('Maximum 8 entries on sticker', 'error'); return; }
 
     const dopeData = checked
         .map(cb => ({

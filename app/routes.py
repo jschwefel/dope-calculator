@@ -139,8 +139,8 @@ def generate_pdf():
             for d in data.get("dope_data", [])
         ]
         wind_label = data.get("wind_label", "")
-        if len(dope_data) > 10:
-            return jsonify({"error": "Maximum 10 DOPE entries"}), 400
+        if len(dope_data) > 8:
+            return jsonify({"error": "Maximum 8 DOPE entries"}), 400
         pdf_bytes = generate_dope_pdf(
             dope_data, label_row, label_col, session_name, offset_x, offset_y,
             fill_sheet=fill_sheet, wind_label=wind_label, adj_decimals=adj_decimals,

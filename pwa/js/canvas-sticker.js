@@ -79,7 +79,7 @@ function fitFontSize(ctx, pairs, halfWAvail, rowH, hasWind, scale, decimals) {
 }
 
 function parseEntries(dopeData) {
-    return (Array.isArray(dopeData) ? dopeData : []).slice(0, 10).map(e => {
+    return (Array.isArray(dopeData) ? dopeData : []).slice(0, 8).map(e => {
         if (Array.isArray(e)) {
             return { dist: Number(e[0]), adj: Number(e[1]), wind: Number(e[2] ?? 0) };
         }
