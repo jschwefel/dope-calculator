@@ -331,7 +331,6 @@ $('new-distance').addEventListener('keydown', e => { if (e.key === 'Enter') addD
 function addDistance(val) {
     if (typeof val !== 'number') val = parseFloat($('new-distance').value);
     if (isNaN(val) || val < 1) { toast('Enter a valid distance', 'error'); return; }
-    if (state.outputDistances.length >= 10) { toast('Maximum 10 distances', 'error'); return; }
     if (!state.outputDistances.includes(val)) {
         state.outputDistances.push(val);
         state.outputDistances.sort((a, b) => a - b);
