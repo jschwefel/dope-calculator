@@ -14,8 +14,6 @@ const state = {
     calculatedResults: {},
     distUnit:          'yd',
     adjUnit:           'mrad',
-    windConditions:    [],
-    lastCalcParams:    null,
     ammoList:          [],
 };
 
@@ -377,40 +375,6 @@ $('wind-angle').addEventListener('input', function () {
     lsSave();
 });
 
-// ── Wind batch ─────────────────────────────────────────────────────────────────
-function windCondLabel(cond) { return `${cond.speed} ${cond.unit} · ${cond.angle}°`; }
-
-function renderWindConditions() {
-    const list = $('wind-condition-list');
-    list.innerHTML = '';
-    state.windConditions.forEach((cond, i) => {
-        const chip = document.createElement('div');
-        chip.className = 'dist-chip wind-cond-chip';
-        chip.innerHTML = `<span>${windCondLabel(cond)}</span><span class="remove-dist" data-idx="${i}">✕</span>`;
-        list.appendChild(chip);
-    });
-    const hasBatch = state.windConditions.length > 0;
-    $('btn-print-batch').classList.toggle('hidden', !hasBatch || !isConnected());
-}
-
-$('btn-add-wind-condition').addEventListener('click', () => {
-    if (state.windConditions.length >= 10) { toast('Maximum 10 wind conditions', 'error'); return; }
-    const speed = parseFloat($('wind-speed').value);
-    const unit  = $('wind-unit').value;
-    const angle = parseInt($('wind-angle').value) || 0;
-    if (isNaN(speed) || speed < 0) { toast('Enter valid wind speed', 'error'); return; }
-    state.windConditions.push({ speed, unit, angle });
-    renderWindConditions();
-    toast(`Added: ${windCondLabel({ speed, unit, angle })}`, 'success');
-});
-
-$('wind-condition-list').addEventListener('click', e => {
-    if (e.target.classList.contains('remove-dist')) {
-        state.windConditions.splice(parseInt(e.target.dataset.idx), 1);
-        renderWindConditions();
-    }
-});
-
 // ── Calculate (client-side) ────────────────────────────────────────────────────
 function _buildCalcParams(windSpeedFps, windAngleDeg) {
     const bcModel = $('bc-model').value;
@@ -448,7 +412,6 @@ $('btn-calculate').addEventListener('click', () => {
     }
 
     const params = _buildCalcParams(windFps, windAngle);
-    state.lastCalcParams = params;
 
     state.calculatedResults = {};
     try {
@@ -576,7 +539,6 @@ $('btn-connect-niimbot').addEventListener('click', async () => {
         $('niimbot-status').textContent = `Connected: ${_niimbotName}`;
         $('niimbot-status').className   = 'niimbot-status connected';
         $('btn-print-sticker').classList.remove('hidden');
-        renderWindConditions();  // shows batch button if conditions exist
         toast(`Connected to ${_niimbotName}`, 'success');
     } catch (err) {
         toast(err.message, 'error');
@@ -585,27 +547,6 @@ $('btn-connect-niimbot').addEventListener('click', async () => {
 
 $('btn-print-sticker').addEventListener('click', async () => {
     await _printSingle(_windLabel());
-});
-
-$('btn-print-batch').addEventListener('click', async () => {
-    if (!state.lastCalcParams) { toast('Calculate DOPE first', 'error'); return; }
-    if (state.windConditions.length === 0) { toast('No wind conditions in batch', 'error'); return; }
-
-    const checkedDists = [...document.querySelectorAll('.sticker-check:checked')]
-        .map(cb => Number(cb.dataset.dist))
-        .sort((a, b) => a - b);
-
-    for (let i = 0; i < state.windConditions.length; i++) {
-        const cond    = state.windConditions[i];
-        const windFps = cond.speed * (WIND_TO_FPS[cond.unit] || 1.46667);
-        const params  = { ...state.lastCalcParams, wind_speed_fps: windFps, wind_angle_deg: cond.angle };
-        const dopeData = checkedDists.map(d => {
-            const res = interpolateDope({ ...params, target_distance: toYards(d) });
-            return [d, roundToClick(fromMils(res.elevation)), roundToClick(fromMils(res.windage))];
-        });
-        await _printCanvasData(dopeData, windCondLabel(cond), `${i + 1}/${state.windConditions.length}`);
-    }
-    toast('Batch print complete', 'success');
 });
 
 async function _printSingle(label) {
@@ -624,7 +565,6 @@ async function _printCanvasData(dopeData, label, progressPrefix) {
 
     $('print-progress').classList.remove('hidden');
     $('btn-print-sticker').disabled = true;
-    $('btn-print-batch').disabled   = true;
 
     try {
         await printSticker(printCanvas, (line, total) => {
@@ -638,7 +578,6 @@ async function _printCanvasData(dopeData, label, progressPrefix) {
     } finally {
         $('print-progress').classList.add('hidden');
         $('btn-print-sticker').disabled = false;
-        $('btn-print-batch').disabled   = false;
     }
 }
 
@@ -680,7 +619,6 @@ function _collectSessionData() {
         wind_unit:         $('wind-unit').value,
         wind_angle:        parseInt($('wind-angle').value) || 0,
         wind_open:         $('wind-details').open,
-        wind_conditions:   state.windConditions,
     };
 }
 
@@ -720,9 +658,6 @@ function _applySessionData(data) {
     if (data.wind_unit)                 $('wind-unit').value  = data.wind_unit;
     if (data.wind_angle !== undefined)  setCompassAngle(data.wind_angle);
     if (data.wind_open)                 $('wind-details').open = true;
-
-    state.windConditions = data.wind_conditions || [];
-    renderWindConditions();
 
     const container = $('dope-entries');
     container.innerHTML = '';

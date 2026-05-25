@@ -8,8 +8,6 @@ const state = {
     calculatedResults: {},      // display_dist_str -> { elevation, windage } in display units
     distUnit:          'yd',    // 'yd' | 'm'
     adjUnit:           'mrad',  // 'mrad' | 'moa'
-    windConditions:    [],      // [{ speed, unit, angle }]
-    lastCalcPayload:   null,    // base calculate payload (no wind) for batch re-use
 };
 
 // ── Conversion ────────────────────────────────────────────────────────────────
@@ -373,41 +371,6 @@ $('wind-angle').addEventListener('input', function () {
     lsSave();
 });
 
-// ── Wind condition batch ──────────────────────────────────────────────────────
-function windCondLabel(cond) {
-    return `${cond.speed} ${cond.unit} · ${cond.angle}°`;
-}
-
-function renderWindConditions() {
-    const list = $('wind-condition-list');
-    list.innerHTML = '';
-    state.windConditions.forEach((cond, i) => {
-        const chip = document.createElement('div');
-        chip.className = 'dist-chip wind-cond-chip';
-        chip.innerHTML = `<span>${windCondLabel(cond)}</span><span class="remove-dist" data-idx="${i}">✕</span>`;
-        list.appendChild(chip);
-    });
-    $('btn-generate-batch-pdf').classList.toggle('hidden', state.windConditions.length === 0);
-}
-
-$('btn-add-wind-condition').addEventListener('click', () => {
-    if (state.windConditions.length >= 10) { toast('Maximum 10 wind conditions', 'error'); return; }
-    const speed = parseFloat($('wind-speed').value);
-    const unit  = $('wind-unit').value;
-    const angle = parseInt($('wind-angle').value) || 0;
-    if (isNaN(speed) || speed < 0) { toast('Enter valid wind speed', 'error'); return; }
-    state.windConditions.push({ speed, unit, angle });
-    renderWindConditions();
-    toast(`Added: ${windCondLabel({ speed, unit, angle })}`, 'success');
-});
-
-$('wind-condition-list').addEventListener('click', e => {
-    if (e.target.classList.contains('remove-dist')) {
-        state.windConditions.splice(parseInt(e.target.dataset.idx), 1);
-        renderWindConditions();
-    }
-});
-
 // ── Calculate ─────────────────────────────────────────────────────────────────
 $('btn-calculate').addEventListener('click', async () => {
     if (state.outputDistances.length === 0) {
@@ -438,8 +401,6 @@ $('btn-calculate').addEventListener('click', async () => {
         dope_entries:     getDopeEntries(),
         output_distances: outputYards,
     };
-    state.lastCalcPayload = basePayload;
-
     const payload = { ...basePayload };
     if ($('wind-details').open) {
         payload.wind_speed     = parseFloat($('wind-speed').value) || 0;
@@ -673,81 +634,6 @@ $('btn-generate-pdf').addEventListener('click', async () => {
     toast('PDF downloaded', 'success');
 });
 
-// ── Generate batch PDF ────────────────────────────────────────────────────────
-$('btn-generate-batch-pdf').addEventListener('click', async () => {
-    if (!state.lastCalcPayload) { toast('Calculate DOPE first', 'error'); return; }
-    if (state.windConditions.length === 0) { toast('Add wind conditions to batch first', 'error'); return; }
-
-    const checked = [...document.querySelectorAll('.sticker-check:checked')];
-    if (checked.length === 0) { toast('No distances selected for sticker', 'error'); return; }
-
-    const checkedDists = checked
-        .map(cb => Number(cb.dataset.dist))
-        .sort((a, b) => a - b);
-
-    const stickers = [];
-    for (const cond of state.windConditions) {
-        const calcPayload = {
-            ...state.lastCalcPayload,
-            wind_speed:     cond.speed,
-            wind_unit:      cond.unit,
-            wind_angle_deg: cond.angle,
-        };
-        const res = await fetch('/api/calculate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(calcPayload),
-        });
-        if (!res.ok) { toast(`Calculation error for ${windCondLabel(cond)}`, 'error'); return; }
-        const data = await res.json();
-
-        const dopeData = checkedDists.map(d => {
-            const yardsKey = String(Math.round(toYards(d)));
-            const val = data.results[yardsKey];
-            if (!val) return null;
-            return {
-                distance:   d,
-                adjustment: roundToClick(fromMils(val.elevation)),
-                windage:    roundToClick(fromMils(val.windage)),
-            };
-        }).filter(Boolean);
-
-        stickers.push({ dope_data: dopeData, wind_label: windCondLabel(cond) });
-    }
-
-    const sessionName = $('session-name').value.trim();
-    const payload = {
-        stickers,
-        label_row:    selectedRow,
-        label_col:    selectedCol,
-        session_name: sessionName,
-        offset_x_in:  parseFloat($('offset-x').value) || 0,
-        offset_y_in:  parseFloat($('offset-y').value) || 0,
-        adj_decimals: adjDecimals(),
-    };
-
-    const res = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-        const data = await res.json();
-        toast(data.error || 'PDF generation failed', 'error');
-        return;
-    }
-
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = sessionName ? `${sessionName.replace(/ /g, '_')}_batch.pdf` : 'dope-batch.pdf';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast('Batch PDF downloaded', 'success');
-});
-
 // ── Sessions ──────────────────────────────────────────────────────────────────
 function _collectSessionData() {
     const rangeTemp = parseFloat($('range-temp-f').value);
@@ -773,7 +659,6 @@ function _collectSessionData() {
         wind_unit:         $('wind-unit').value,
         wind_angle:        parseInt($('wind-angle').value) || 0,
         wind_open:         $('wind-details').open,
-        wind_conditions:   state.windConditions,
     };
 }
 
@@ -814,9 +699,6 @@ function _applySessionData(data) {
     if (data.wind_unit)                 $('wind-unit').value  = data.wind_unit;
     if (data.wind_angle  !== undefined) setCompassAngle(data.wind_angle);
     if (data.wind_open)                 $('wind-details').open = true;
-
-    state.windConditions = data.wind_conditions || [];
-    renderWindConditions();
 
     const container = $('dope-entries');
     container.innerHTML = '';

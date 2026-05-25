@@ -571,16 +571,6 @@ tr:last-child td { border-bottom: none; }
     min-width: 240px;
 }
 
-.wind-batch-section {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--border);
-}
-
-.wind-cond-chip {
-    color: var(--amber);
-    border-color: #7a3300;
-}
 
 /* Sticker preview — wind sub-lines ─────────────────────────────────────── */
 .preview-has-wind {
