@@ -480,7 +480,7 @@ function renderResultsTable() {
 
     Object.entries(state.calculatedResults)
         .sort(([a], [b]) => Number(a) - Number(b))
-        .forEach(([dist, result]) => {
+        .forEach(([dist, result], idx) => {
             const elev = result.elevation;
             const wind = result.windage;
             const clicks = Math.round(roundToClick(elev) / cv);
@@ -499,7 +499,8 @@ function renderResultsTable() {
                 <td class="${adjClass(elev)}">${clicks > 0 ? '+' : ''}${clicks}</td>
                 ${windCell}
                 <td><input type="checkbox" class="sticker-check"
-                    data-dist="${dist}" data-adj="${elevR}" data-wind="${windR}" checked></td>
+                    data-dist="${dist}" data-adj="${elevR}" data-wind="${windR}"
+                    ${idx < 8 ? 'checked' : ''}></td>
             `;
             tbody.appendChild(tr);
         });
